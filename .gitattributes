@@ -1,0 +1,15 @@
+* text=auto eol=lf
+*.cs text diff=csharp
+*.asset text
+*.prefab text
+*.unity text
+*.meta text
+*.fbx filter=lfs diff=lfs merge=lfs -text
+*.FBX filter=lfs diff=lfs merge=lfs -text
+*.bytes filter=lfs diff=lfs merge=lfs -text
+*.png filter=lfs diff=lfs merge=lfs -text
+*.jpg filter=lfs diff=lfs merge=lfs -text
+*.jpeg filter=lfs diff=lfs merge=lfs -text
+*.tga filter=lfs diff=lfs merge=lfs -text
+*.exr filter=lfs diff=lfs merge=lfs -text
+Assets/Packages/com.collint.mmd/Samples/Textures/Atmosphere/Perlin3D.asset filter=lfs diff=lfs merge=lfs -text

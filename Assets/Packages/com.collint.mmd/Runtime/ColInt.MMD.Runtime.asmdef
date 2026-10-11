@@ -1,0 +1,17 @@
+{
+  "name": "ColInt.MMD.Runtime",
+  "rootNamespace": "ColInt.MMD",
+  "references": [
+    "Unity.Entities",
+    "Unity.Collections",
+    "Unity.Mathematics",
+    "Unity.Transforms",
+    "Unity.Burst",
+    "Unity.Deformations",
+    "Unity.Entities.Graphics",
+    "Unity.Scenes",
+    "Unity.Physics"
+  ],
+  "allowUnsafeCode": true,
+  "autoReferenced": true
+}

@@ -1,0 +1,25 @@
+{
+  "name": "ColInt.MMD.Tests.EditMode",
+  "rootNamespace": "ColInt.MMD",
+  "references": [
+    "ColInt.MMD.Runtime",
+    "ColInt.MMD.Editor",
+    "ColInt.MMD.Samples",
+    "Unity.Entities",
+    "Unity.Collections",
+    "Unity.Mathematics",
+    "Unity.Transforms",
+    "Unity.Deformations",
+    "Unity.Physics",
+    "ColInt.MMD.Tests.Shared",
+    "ColInt.MMD.Samples.Editor"
+  ],
+  "allowUnsafeCode": true,
+  "autoReferenced": false,
+  "includePlatforms": [
+    "Editor"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

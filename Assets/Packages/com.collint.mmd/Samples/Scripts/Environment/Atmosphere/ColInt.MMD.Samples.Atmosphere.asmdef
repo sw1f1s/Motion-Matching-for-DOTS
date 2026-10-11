@@ -1,0 +1,9 @@
+{
+  "name": "ColInt.MMD.Samples.Atmosphere",
+  "rootNamespace": "ColInt.MMD.Samples.Environment.Atmosphere",
+  "references": [
+    "Unity.RenderPipelines.Core.Runtime",
+    "Unity.RenderPipelines.Universal.Runtime"
+  ],
+  "autoReferenced": true
+}

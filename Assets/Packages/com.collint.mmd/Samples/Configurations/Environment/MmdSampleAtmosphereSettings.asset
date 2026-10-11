@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 835eb711a808b45fb981f173e748e665, type: 3}
+  m_Name: MmdSampleAtmosphereSettings
+  m_EditorClassIdentifier: ColInt.MMD.Samples.Atmosphere::ColInt.MMD.Samples.Environment.Atmosphere.MmdSampleAtmosphereSettings
+  _zenithColor: {r: 0.12, g: 0.34, b: 0.65, a: 1}
+  _horizonColor: {r: 0.57, g: 0.72, b: 0.83, a: 1}
+  _sunColor: {r: 1, g: 0.91, b: 0.72, a: 1}
+  _sunRadius: 1.5
+  _sunBrightness: 12
+  _perlinNoise: {fileID: 11700000, guid: 026577da1f0924b899706cffe95e7724, type: 2}
+  _cloudCoverage: 0.04
+  _cloudDensity: 0.53
+  _cloudBase: 600
+  _cloudThickness: 300
+  _cloudScale: 2000
+  _wind: {x: 20, y: 6}
+  _cloudColor: {r: 0.93, g: 0.95, b: 1, a: 1}
+  _cloudShadowColor: {r: 0.28, g: 0.38, b: 0.51, a: 1}
+  _cloudSteps: 36
+  _fogDensity: 0.003
+  _fogColor: {r: 0.57, g: 0.69, b: 0.74, a: 1}
+  _fogBaseHeight: 0
+  _fogHeight: 75
+  _fogNoiseScale: 180
+  _fogNoiseStrength: 0.4
+  _fogDistance: 1400
+  _fogSteps: 40
+  _fogLightScattering: 0.55
+  _sunRayStrength: 0.6
+  _sunRayAnisotropy: 0.72
+  _sunRayDistance: 650
+  _cloudShadowStrength: 1
+  _pixelHeight: 360
+  _colorSteps: 48
+  _dither: 0.35
+  _previewTime: -1

@@ -1,0 +1,19 @@
+{
+  "name": "ColInt.MMD.Editor",
+  "rootNamespace": "ColInt.MMD",
+  "references": [
+    "ColInt.MMD.Runtime",
+    "Unity.Entities",
+    "Unity.Entities.Hybrid",
+    "Unity.Collections",
+    "Unity.Mathematics",
+    "Unity.Transforms",
+    "Unity.Newtonsoft.Json",
+    "Unity.Physics"
+  ],
+  "allowUnsafeCode": true,
+  "autoReferenced": true,
+  "includePlatforms": [
+    "Editor"
+  ]
+}

@@ -1,0 +1,23 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+  <ui:VisualElement class="entity-card">
+    <ui:VisualElement class="row">
+      <ui:Label name="entityTitle" class="entity-title" />
+      <ui:Label name="status" class="badge" />
+    </ui:VisualElement>
+    <ui:Label name="entityIdentity" class="muted wrap" />
+    <ui:Label text="CURRENT ANIMATION" class="eyebrow card-heading" />
+    <ui:Label name="clipTitle" class="clip-title wrap" />
+    <ui:Label name="groupLabel" class="group-label wrap" />
+    <ui:ProgressBar name="progress" low-value="0" high-value="100" class="playback-progress" />
+    <ui:VisualElement class="row playback-meta">
+      <ui:Label name="timeLabel" />
+      <ui:Label name="loopLabel" class="muted" />
+    </ui:VisualElement>
+    <ui:VisualElement class="row buttons">
+      <ui:Button name="pingClip" text="Show clip in Project" />
+      <ui:Button name="frameEntity" text="Frame in Scene" />
+      <ui:Button name="selectEntity" text="Show in Entities Hierarchy" />
+    </ui:VisualElement>
+    <ui:Foldout name="detailsFoldout" text="Details · transitions, history &amp; entity data" value="false" class="entity-details" />
+  </ui:VisualElement>
+</ui:UXML>

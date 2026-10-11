@@ -1,0 +1,12 @@
+{
+  "name": "ColInt.MMD.Tests.Shared",
+  "rootNamespace": "ColInt.MMD.Tests",
+  "references": [
+    "ColInt.MMD.Runtime",
+    "Unity.Mathematics"
+  ],
+  "autoReferenced": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

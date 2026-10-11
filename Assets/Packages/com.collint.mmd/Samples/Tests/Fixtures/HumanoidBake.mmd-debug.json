@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Fingerprint": "3499682562ab1af042c6fafdde8a1d51e10e59674cd8722e145ff8d26c54a0da",
+  "DatabasePath": "Assets/Packages/com.collint.mmd/Samples/Tests/Fixtures/HumanoidBake.bytes",
+  "Names": [
+    "M_Neutral_Run_Loop_F"
+  ],
+  "AssetPaths": [
+    "Assets/Packages/com.collint.mmd/Samples/Animations/Run/M_Neutral_Run_Loop_F.fbx"
+  ]
+}

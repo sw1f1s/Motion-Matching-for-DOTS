@@ -1,0 +1,96 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 86504523238fe4c9085989d94ad16e66, type: 3}
+  m_Name: SampleCharacterConfiguration
+  m_EditorClassIdentifier: ColInt.MMD.Samples::ColInt.MMD.Samples.Character.Configurations.MmdSampleCharacterConfiguration
+  _assets:
+    <Database>k__BackingField: {fileID: 4900000, guid: 9dea6a54777f94d8d9a9b682574e7a47, type: 3}
+    <RenderPrefab>k__BackingField:
+      Id:
+        GlobalId:
+          SceneObjectIdentifier0: 5577359820627632875
+          SceneObjectIdentifier1: 0
+          AssetGUID:
+            Value:
+              x: 565194163
+              y: 3058579715
+              z: 4241196467
+              w: 2589248733
+          IdentifierType: 1
+        GenerationType: 5
+  _locomotion:
+    <WalkSpeed>k__BackingField: 2
+    <RunSpeed>k__BackingField: 5
+    <TurnSpeed>k__BackingField: 4.5
+    <IdleGroup>k__BackingField: Idle
+    <WalkGroup>k__BackingField: Walk
+    <RunGroup>k__BackingField: Run
+    <TurnGroup>k__BackingField: Turn
+    <StartGroup>k__BackingField: Start
+  _transitions:
+    <PoseDuration>k__BackingField: 0.2
+    <IdlePoseDuration>k__BackingField: 0.35
+    <RootDuration>k__BackingField: 0.1
+  _jump:
+    <Height>k__BackingField: 1.2
+    <TakeoffTime>k__BackingField: 0.2
+    <AirAcceleration>k__BackingField: 4
+    <Groups>k__BackingField:
+      <Stand>k__BackingField: Jump Stand
+      <Walk>k__BackingField: Jump Walk
+      <Run>k__BackingField: Jump Run
+  _fall:
+    <MaximumSpeed>k__BackingField: 25
+    <GroundContactDistance>k__BackingField: 0.05
+    <EntrySpeed>k__BackingField: 2
+    <Group>k__BackingField: Fall
+  _landing:
+    <HeavyHeight>k__BackingField: 3
+    <LightRecoveryTime>k__BackingField: 0.08
+    <HeavyRecoveryTime>k__BackingField: 0.9
+    <LightGroups>k__BackingField:
+      <Stand>k__BackingField: Land Stand Light
+      <Walk>k__BackingField: Land Walk Light
+      <Run>k__BackingField: Land Run Light
+    <HeavyGroups>k__BackingField:
+      <Stand>k__BackingField: Land Stand Heavy
+      <Walk>k__BackingField: Land Walk Heavy
+      <Run>k__BackingField: Land Run Heavy
+  _crouch:
+    <Speed>k__BackingField: 1.2
+    <Height>k__BackingField: 1.2
+    <TransitionDuration>k__BackingField: 0.35
+    <IdleGroup>k__BackingField: Crouch Idle
+    <MoveGroup>k__BackingField: Crouch Move
+    <TurnGroup>k__BackingField: Crouch Turn
+    <StartGroup>k__BackingField: Crouch Start
+    <EnterGroup>k__BackingField: Crouch Enter
+    <ExitGroup>k__BackingField: Crouch Exit
+  _traversal:
+    <Reach>k__BackingField: 1.35
+    <MinimumHeight>k__BackingField: 0.45
+    <MaximumHeight>k__BackingField: 2.8
+    <MantleHeight>k__BackingField: 1.75
+    <MaximumCrossingDepth>k__BackingField: 1.2
+    <MaximumLandingDrop>k__BackingField: 1.2
+    <CatchReach>k__BackingField: 2.2
+    <CatchDistance>k__BackingField: 0.25
+    <AlignmentDuration>k__BackingField: 0.3
+    <Groups>k__BackingField:
+      <Mantle>k__BackingField: TraversalMantle
+      <Climb>k__BackingField: TraversalClimb
+      <Vault>k__BackingField: TraversalVault
+      <Hurdle>k__BackingField: TraversalHurdle
+      <CatchMantle>k__BackingField: TraversalCatchMantle
+      <CatchCliff>k__BackingField: TraversalCatchCliff
+      <CatchVault>k__BackingField: TraversalCatchVault
+      <CatchHurdle>k__BackingField: TraversalCatchHurdle

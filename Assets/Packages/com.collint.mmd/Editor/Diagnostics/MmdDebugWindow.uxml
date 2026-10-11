@@ -1,0 +1,14 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+  <ui:Style src="MmdDebugWindow.uss" />
+  <ui:VisualElement class="mmd-debug">
+    <uie:Toolbar>
+      <ui:DropdownField name="worldFilter" class="world-filter" />
+      <uie:ToolbarSearchField name="search" class="search" />
+      <uie:ToolbarToggle name="freeze" text="Freeze display" tooltip="Freeze only this window. The simulation keeps running." />
+      <uie:ToolbarButton name="refresh" text="Refresh" tooltip="Read fresh ECS data and reload clip name catalogs." />
+    </uie:Toolbar>
+    <ui:ScrollView name="entities" class="entity-list">
+      <ui:Label name="emptyList" class="empty-text" text="No matching entities. Enter Play Mode or start a host world containing MmdDatabase and MmdPlayback." />
+    </ui:ScrollView>
+  </ui:VisualElement>
+</ui:UXML>

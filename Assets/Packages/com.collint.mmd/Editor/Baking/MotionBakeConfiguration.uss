@@ -1,0 +1,19 @@
+.mmd-animation-group {
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+.mmd-group-clips {
+    height: 240px;
+    margin-top: 4px;
+    margin-bottom: 6px;
+}
+
+.mmd-bake-button {
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.mmd-hidden {
+    display: none;
+}

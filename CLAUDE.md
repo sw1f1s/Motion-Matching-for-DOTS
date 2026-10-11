@@ -1,0 +1,1 @@
+Read AGENTS.md, .editorconfig and the applicable Rules before editing Motion Matching for DOTS. The package is Assets/Packages/com.collint.mmd; bundled Sample assets, gameplay and tests are in Assets/Packages/com.collint.mmd/Samples. Edit this single copy and preserve Runtime/Editor/Sample dependency boundaries.

@@ -1,0 +1,21 @@
+{
+  "name": "ColInt.MMD.Tests.PlayMode",
+  "rootNamespace": "ColInt.MMD.Tests",
+  "references": [
+    "ColInt.MMD.Runtime",
+    "ColInt.MMD.Samples",
+    "Unity.Entities",
+    "ColInt.MMD.Tests.Shared",
+    "Unity.Collections",
+    "Unity.Mathematics",
+    "Unity.Deformations",
+    "Unity.Entities.Graphics",
+    "Unity.Scenes",
+    "Unity.Transforms",
+    "Unity.Physics"
+  ],
+  "autoReferenced": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

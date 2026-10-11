@@ -1,0 +1,25 @@
+{
+  "name": "ColInt.MMD.Samples",
+  "rootNamespace": "ColInt.MMD",
+  "references": [
+    "ColInt.MMD.Runtime",
+    "Unity.Entities",
+    "Unity.Collections",
+    "Unity.Mathematics",
+    "Unity.Transforms",
+    "Unity.InputSystem",
+    "Unity.Burst",
+    "Unity.Entities.Graphics",
+    "Unity.Scenes",
+    "Unity.Physics"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": true,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

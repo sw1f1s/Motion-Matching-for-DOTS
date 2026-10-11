@@ -1,0 +1,34 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+  <ui:VisualElement>
+    <ui:VisualElement class="card">
+      <ui:VisualElement class="row">
+        <ui:Label text="LATEST TRANSITION" class="section-title" />
+        <ui:Label name="transitionStatus" class="badge" />
+      </ui:VisualElement>
+      <ui:Label name="transitionRoute" class="transition-route wrap" />
+      <ui:Label text="POSE SMOOTHING" class="eyebrow" />
+      <ui:ProgressBar name="poseTransition" low-value="0" high-value="100" class="transition-progress" />
+      <ui:Label text="ROOT MOTION SMOOTHING" class="eyebrow" />
+      <ui:ProgressBar name="rootTransition" low-value="0" high-value="100" class="transition-progress" />
+      <ui:Label name="transitionNote" class="muted wrap" />
+    </ui:VisualElement>
+    <ui:Foldout text="Last 5 clips" value="true" class="card">
+      <ui:Label text="Current clip and up to 4 previous clips, newest first. Recorded per entity at 5 Hz; fast changes between observations may be missed." class="muted wrap" />
+      <ui:VisualElement name="history" />
+    </ui:Foldout>
+    <ui:VisualElement name="problem" class="warning hidden">
+      <ui:Label name="problemText" class="wrap" />
+    </ui:VisualElement>
+    <ui:VisualElement name="namesWarning" class="notice hidden">
+      <ui:Label text="Clip names are unavailable for this database. Bake it to generate its editor debug catalog; playback data and groups remain available." class="wrap" />
+    </ui:VisualElement>
+    <ui:VisualElement class="card">
+      <ui:Label text="PLAYBACK &amp; MATCHING" class="section-title" />
+      <ui:VisualElement name="playbackRows" />
+    </ui:VisualElement>
+    <ui:VisualElement class="card">
+      <ui:Label text="ENTITY &amp; DATABASE" class="section-title" />
+      <ui:VisualElement name="entityRows" />
+    </ui:VisualElement>
+  </ui:VisualElement>
+</ui:UXML>

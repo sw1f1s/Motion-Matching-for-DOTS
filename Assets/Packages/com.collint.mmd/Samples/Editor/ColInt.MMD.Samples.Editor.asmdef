@@ -1,0 +1,19 @@
+{
+  "name": "ColInt.MMD.Samples.Editor",
+  "rootNamespace": "ColInt.MMD.Samples.Editor",
+  "references": [
+    "ColInt.MMD.Runtime",
+    "ColInt.MMD.Editor",
+    "ColInt.MMD.Samples",
+    "Unity.Entities",
+    "Unity.Collections",
+    "Unity.Mathematics",
+    "Unity.Transforms",
+    "Unity.Physics"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "allowUnsafeCode": true,
+  "autoReferenced": true
+}

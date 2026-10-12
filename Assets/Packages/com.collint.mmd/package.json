@@ -13,7 +13,8 @@
     "com.unity.burst": "1.8.29",
     "com.unity.nuget.newtonsoft-json": "3.2.2",
     "com.unity.render-pipelines.universal": "17.3.0",
-    "com.unity.inputsystem": "1.19.0"
+    "com.unity.inputsystem": "1.19.0",
+    "com.unity.modules.terrainphysics": "1.0.0"
   },
   "license": "MIT",
   "author": {

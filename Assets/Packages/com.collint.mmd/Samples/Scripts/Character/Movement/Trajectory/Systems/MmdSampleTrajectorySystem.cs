@@ -1,3 +1,6 @@
+using ColInt.MMD.Samples.Character.Movement.SlideState.Components;
+using ColInt.MMD.Samples.Character.Movement.Shared.Components;
+using ColInt.MMD.Samples.Character.Movement.LocomotionState.Helpers;
 using ColInt.MMD.Lifecycle.Components;
 using ColInt.MMD.MotionMatching.Components;
 using ColInt.MMD.MotionMatching.Helpers;
@@ -35,6 +38,7 @@ namespace ColInt.MMD.Samples.Character.Movement.Trajectory.Systems {
 		}
 
 		[BurstCompile]
+		[WithNone(typeof(MmdSampleState<MmdSampleSlide>), typeof(MmdSampleState<MmdSampleSlideExit>))]
 		private partial struct TrajectoryPredictionJob : IJobEntity {
 			public MmdSampleInput Input;
 			[ReadOnly] public ComponentLookup<MmdSampleCharacterInputOverride> CharacterInputs;
@@ -46,7 +50,7 @@ namespace ColInt.MMD.Samples.Character.Movement.Trajectory.Systems {
 				var input = CharacterInputs.HasComponent(entity) ? CharacterInputs[entity].Value : Input;
 				space = new MmdSearchQuerySpace { Position = transform.Position, Rotation = transform.Rotation };
 				points.ResizeUninitialized(3);
-				float desiredSpeed = math.lengthsq(input.Movement) > 0f ? input.Run ? control.RunSpeed : control.WalkSpeed : 0f;
+				float desiredSpeed = math.lengthsq(input.Movement) > 0f ? MmdSampleGait.Speed(control, input) : 0f;
 				float2 facing = MmdSampleFacing.Resolve(input.Movement);
 				float error = MmdSampleFacing.YawError(transform.Rotation, facing, trajectory.TurnError);
 				trajectory.TurnError = error;

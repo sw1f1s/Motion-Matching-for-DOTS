@@ -8,6 +8,8 @@ namespace ColInt.MMD.Samples.Character.Input.Components {
 		// Camera heading reference in world X/Z; idle locomotion does not follow it.
 		public float2 Facing;
 		public bool Run;
+		public bool Sprint;
+		public bool CrouchPressed;
 		public bool Crouch;
 		public bool JumpPressed;
 	}

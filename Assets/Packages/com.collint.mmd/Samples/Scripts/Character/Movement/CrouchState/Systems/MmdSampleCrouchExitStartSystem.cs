@@ -1,3 +1,4 @@
+using ColInt.MMD.Samples.Character.Movement.LocomotionState.Helpers;
 using ColInt.MMD.Actions.Components;
 using ColInt.MMD.Database.Components;
 using ColInt.MMD.Lifecycle.Components;
@@ -39,10 +40,11 @@ namespace ColInt.MMD.Samples.Character.Movement.CrouchState.Systems {
 				in PhysicsVelocity velocity, ref MmdSampleMovement movement, ref MmdSearchSettings settings, ref MmdPlayback playback,
 				ref MmdInertialization smoothing, in MmdDatabase data, ref MmdActionRequest request, DynamicBuffer<MmdSearchQueryElement> query) {
 				control = progress.StandingControl;
+				settings.TrajectoryDirectionWeight = progress.StandingDirectionWeight;
 				bool stationary = math.length(velocity.Linear.xz) < control.WalkSpeed * 0.3f && math.lengthsq(Input.Movement) < 0.001f;
 				movement = default;
 				int action = crouch.ExitAction;
-				settings.RequiredTags = stationary ? control.IdleTags : (Input.Run ? control.RunTags : control.WalkTags) | control.StartTags;
+				settings.RequiredTags = stationary ? control.IdleTags : MmdSampleGait.Tags(control, Input) | control.StartTags;
 				smoothing.PoseDuration = math.max(smoothing.PoseDuration, crouch.TransitionDuration);
 				settings.ExcludedTags &= ~control.StartTags;
 				settings.TrajectoryPositionWeight = 1f;

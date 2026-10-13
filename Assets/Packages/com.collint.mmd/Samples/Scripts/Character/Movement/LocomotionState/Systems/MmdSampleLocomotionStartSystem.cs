@@ -1,3 +1,4 @@
+using ColInt.MMD.Samples.Character.Movement.LocomotionState.Helpers;
 using ColInt.MMD.Actions.Components;
 using ColInt.MMD.Database.Components;
 using ColInt.MMD.Lifecycle.Components;
@@ -61,7 +62,7 @@ namespace ColInt.MMD.Samples.Character.Movement.LocomotionState.Systems {
 				settings.PreferLoop = false;
 				if (math.lengthsq(input.Movement) > 0f && math.lengthsq(velocity.Linear.xz) > math.square(control.WalkSpeed * 0.3f)) {
 					// Resume the commanded gait directly when the action already exits in motion.
-					settings.RequiredTags = input.Run ? control.RunTags : control.WalkTags;
+					settings.RequiredTags = MmdSampleGait.Tags(control, input);
 				}
 				playback.SearchCountdown = 0f;
 				playback.TransitionElapsed = settings.MinimumTransitionTime;

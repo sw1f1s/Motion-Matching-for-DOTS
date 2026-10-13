@@ -7,6 +7,9 @@ namespace ColInt.MMD.Samples.Character.Configurations {
 		[field: SerializeField, Min(0.01f)]
 		public float Speed { get; set; } = 1.2f;
 
+		[field: SerializeField, Min(0.01f), Tooltip("Authored forward speed in the crouch movement clips, in metres per second. Playback tempo scales it to Speed.")]
+		public float AnimationSpeed { get; set; } = 2.25f;
+
 		[field: SerializeField, Range(0.6f, 1.79f)]
 		public float Height { get; set; } = 1.2f;
 

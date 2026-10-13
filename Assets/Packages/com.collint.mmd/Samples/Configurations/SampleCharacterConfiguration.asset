@@ -30,10 +30,12 @@ MonoBehaviour:
   _locomotion:
     <WalkSpeed>k__BackingField: 2
     <RunSpeed>k__BackingField: 5
+    <SprintSpeed>k__BackingField: 7
     <TurnSpeed>k__BackingField: 4.5
     <IdleGroup>k__BackingField: Idle
     <WalkGroup>k__BackingField: Walk
     <RunGroup>k__BackingField: Run
+    <SprintGroup>k__BackingField: Sprint
     <TurnGroup>k__BackingField: Turn
     <StartGroup>k__BackingField: Start
   _transitions:
@@ -67,6 +69,7 @@ MonoBehaviour:
       <Run>k__BackingField: Land Run Heavy
   _crouch:
     <Speed>k__BackingField: 1.2
+    <AnimationSpeed>k__BackingField: 2.25
     <Height>k__BackingField: 1.2
     <TransitionDuration>k__BackingField: 0.35
     <IdleGroup>k__BackingField: Crouch Idle
@@ -75,16 +78,27 @@ MonoBehaviour:
     <StartGroup>k__BackingField: Crouch Start
     <EnterGroup>k__BackingField: Crouch Enter
     <ExitGroup>k__BackingField: Crouch Exit
+  _slide:
+    <MinimumEntrySpeed>k__BackingField: 4.5
+    <Deceleration>k__BackingField: 3
+    <StopSpeed>k__BackingField: 0.35
+    <MaximumSpeed>k__BackingField: 14
+    <SteeringSpeed>k__BackingField: 2
+    <MinimumDownhillAngle>k__BackingField: 5
+    <EnterGroup>k__BackingField: Slide Enter
+    <MotionGroup>k__BackingField: Slide
   _traversal:
     <Reach>k__BackingField: 1.35
     <MinimumHeight>k__BackingField: 0.45
-    <MaximumHeight>k__BackingField: 2.8
+    <MaximumHeight>k__BackingField: 3.1
     <MantleHeight>k__BackingField: 1.75
     <MaximumCrossingDepth>k__BackingField: 1.2
     <MaximumLandingDrop>k__BackingField: 1.2
     <CatchReach>k__BackingField: 2.2
     <CatchDistance>k__BackingField: 0.25
     <AlignmentDuration>k__BackingField: 0.3
+    <LeftHandPath>k__BackingField: root/pelvis/spine_01/spine_02/spine_03/spine_04/spine_05/clavicle_l/upperarm_l/lowerarm_l/hand_l
+    <RightHandPath>k__BackingField: root/pelvis/spine_01/spine_02/spine_03/spine_04/spine_05/clavicle_r/upperarm_r/lowerarm_r/hand_r
     <Groups>k__BackingField:
       <Mantle>k__BackingField: TraversalMantle
       <Climb>k__BackingField: TraversalClimb

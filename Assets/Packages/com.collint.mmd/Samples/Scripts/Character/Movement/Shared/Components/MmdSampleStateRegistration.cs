@@ -1,3 +1,4 @@
+using ColInt.MMD.Samples.Character.Movement.SlideState.Components;
 using ColInt.MMD.Samples.Character.Movement.CrouchState.Components;
 using ColInt.MMD.Samples.Character.Movement.FallState.Components;
 using ColInt.MMD.Samples.Character.Movement.JumpState.Components;
@@ -53,3 +54,9 @@ using Unity.Entities;
 [assembly: RegisterGenericComponentType(typeof(MmdSampleState<MmdSampleCatchHurdle>))]
 [assembly: RegisterGenericComponentType(typeof(MmdSampleStateStarted<MmdSampleCatchHurdle>))]
 [assembly: RegisterGenericComponentType(typeof(MmdSampleStateFinished<MmdSampleCatchHurdle>))]
+[assembly: RegisterGenericComponentType(typeof(MmdSampleState<MmdSampleSlide>))]
+[assembly: RegisterGenericComponentType(typeof(MmdSampleStateStarted<MmdSampleSlide>))]
+[assembly: RegisterGenericComponentType(typeof(MmdSampleStateFinished<MmdSampleSlide>))]
+[assembly: RegisterGenericComponentType(typeof(MmdSampleState<MmdSampleSlideExit>))]
+[assembly: RegisterGenericComponentType(typeof(MmdSampleStateStarted<MmdSampleSlideExit>))]
+[assembly: RegisterGenericComponentType(typeof(MmdSampleStateFinished<MmdSampleSlideExit>))]

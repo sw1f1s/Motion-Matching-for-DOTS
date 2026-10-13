@@ -9,6 +9,7 @@ namespace ColInt.MMD.Samples.Character.Movement.TraversalState.Components {
 		public quaternion StartRotation;
 		public quaternion Rotation;
 		public float3 Front;
+		public float3 Ledge;
 		public float3 AboveFront;
 		public float3 AboveEnd;
 		public float3 End;

@@ -37,16 +37,34 @@ namespace ColInt.MMD.Samples.Character.Movement.TraversalState.Helpers {
 			manager.AddComponent<MmdSampleTraversalProgress>(entity);
 			manager.AddComponent<PhysicsMassOverride>(entity);
 			manager.AddComponentData(entity, new PhysicsGravityFactor { Value = 1f });
+			int leftHand = Bone(ref database.Value, configuration.Traversal.LeftHandPath);
+			int rightHand = Bone(ref database.Value, configuration.Traversal.RightHandPath);
+
 			var profiles = manager.AddBuffer<MmdSampleTraversalClip>(entity);
 			int[] actions = { manager.GetComponentData<MmdSampleMantle>(entity).ActionId, manager.GetComponentData<MmdSampleClimb>(entity).ActionId, manager.GetComponentData<MmdSampleVault>(entity).ActionId, manager.GetComponentData<MmdSampleHurdle>(entity).ActionId, manager.GetComponentData<MmdSampleCatchMantle>(entity).ActionId, manager.GetComponentData<MmdSampleCatchCliff>(entity).ActionId, manager.GetComponentData<MmdSampleCatchVault>(entity).ActionId, manager.GetComponentData<MmdSampleCatchHurdle>(entity).ActionId };
 			for (int clip = 0; clip < database.Value.Clips.Length; clip++) {
 				for (int group = 0; group < actions.Length; group++) {
 					if (database.Value.Clips[clip].ActionId == actions[group]) {
-						profiles.Add(MmdSampleTraversalAnimation.Profile(ref database.Value, clip, group >= 4));
+						var profile = MmdSampleTraversalAnimation.Profile(ref database.Value, clip, group >= 4);
+						if (group == 1) {
+							profile = MmdSampleTraversalAnimation.Contacts(ref database.Value, profile, leftHand, rightHand);
+						}
+						profiles.Add(profile);
 						break;
 					}
 				}
 			}
+		}
+
+
+		private static int Bone(ref MotionDatabase database, string path) {
+			int hash = BonePathHash.Calculate(path);
+			for (int bone = 0; bone < database.Parents.Length; bone++) {
+				if (database.BoneNameHashes[bone] == hash) {
+					return bone;
+				}
+			}
+			throw new ArgumentException("Traversal hand path does not identify a database bone: " + path);
 		}
 
 		private static int Action(ref MotionDatabase database, string name) {

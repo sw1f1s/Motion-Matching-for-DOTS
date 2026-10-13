@@ -72,6 +72,20 @@ namespace ColInt.MMD.Playback.Helpers {
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static float3 DecayRotation(float3 offset, float3 velocity, float elapsed, float duration) {
+			float angle = math.length(offset);
+			if (angle < 0.000001f || duration <= 0f || elapsed >= duration) {
+				return float3.zero;
+			}
+			// A rotation correction decays along its shortest-arc axis. Transverse
+			// velocity would introduce a new joint twist; an away-pointing or excessive
+			// velocity would overshoot. 2.5 is the monotone bound of this quintic.
+			float3 axis = offset / angle;
+			float speed = math.clamp(math.dot(velocity, axis), -2.5f * angle / duration, 0f);
+			return Decay(offset, axis * speed, elapsed, duration);
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static float3 RotationVector(quaternion rotation) {
 			rotation = math.normalize(rotation);
 			if (rotation.value.w < 0f) {

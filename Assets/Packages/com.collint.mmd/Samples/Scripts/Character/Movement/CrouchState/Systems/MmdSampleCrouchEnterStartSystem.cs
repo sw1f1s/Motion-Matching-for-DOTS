@@ -40,13 +40,16 @@ namespace ColInt.MMD.Samples.Character.Movement.CrouchState.Systems {
 				ref MmdInertialization smoothing, in MmdDatabase data, ref MmdActionRequest request, DynamicBuffer<MmdSearchQueryElement> query) {
 				progress.StandingControl = control;
 				progress.StandingInertialization = smoothing;
+				progress.StandingDirectionWeight = settings.TrajectoryDirectionWeight;
 				float speed = math.length(velocity.Linear.xz);
 				bool stationary = speed < control.WalkSpeed * 0.3f && math.lengthsq(Input.Movement) < 0.001f;
 				control.WalkSpeed = crouch.Speed;
 				control.RunSpeed = crouch.Speed;
+				control.SprintSpeed = crouch.Speed;
 				control.IdleTags = crouch.IdleTags;
 				control.WalkTags = crouch.MoveTags;
 				control.RunTags = crouch.MoveTags;
+				control.SprintTags = crouch.MoveTags;
 				control.TurnTags = crouch.TurnTags;
 				control.StartTags = crouch.StartTags;
 				movement = new MmdSampleMovement { CrouchCollider = true };
@@ -55,7 +58,7 @@ namespace ColInt.MMD.Samples.Character.Movement.CrouchState.Systems {
 				smoothing.PoseDuration = math.max(smoothing.PoseDuration, crouch.TransitionDuration);
 				settings.ExcludedTags &= ~crouch.StartTags;
 				settings.TrajectoryPositionWeight = 1f;
-				playback.Speed = 1f;
+				playback.Speed = stationary ? 1f : math.saturate(crouch.Speed / crouch.AnimationSpeed);
 				playback.SearchCountdown = 0f;
 				playback.TransitionElapsed = settings.MinimumTransitionTime;
 				progress.Duration = crouch.TransitionDuration;

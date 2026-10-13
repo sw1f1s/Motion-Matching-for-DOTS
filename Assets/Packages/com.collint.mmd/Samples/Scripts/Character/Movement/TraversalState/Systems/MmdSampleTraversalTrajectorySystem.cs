@@ -35,7 +35,7 @@ namespace ColInt.MMD.Samples.Character.Movement.TraversalState.Systems {
 					float future = time + prediction;
 					trajectoryPoints[point] = new MmdTrajectoryPoint {
 						Time = prediction, Position = MmdSampleTraversalPath.Position(ref data.Value.Value, target.ValueRO, progress.ValueRO.Clip, future),
-						Forward = math.forward(MmdSampleTraversalPath.Rotation(target.ValueRO, future - progress.ValueRO.Clip.StartTime, settings.ValueRO.AlignmentDuration))
+						Forward = math.forward(MmdSampleTraversalPath.Rotation(target.ValueRO, progress.ValueRO.Clip, future, settings.ValueRO.AlignmentDuration))
 					};
 				}
 			}

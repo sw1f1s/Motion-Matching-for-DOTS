@@ -48,6 +48,7 @@ namespace ColInt.MMD.Samples.Character.Movement.Shared.Systems {
 				probe.GroundProbeDistance = downwardReach;
 				if (MmdGroundMovementQuery.Ground(World, entity, collider, transform, probe, transform.Position, out var contact)) {
 					// Retain locomotion support across a descending step. Airborne states still require actual contact.
+					ground.SupportHeight = contact.y;
 					float height = contact.y - transform.Position.y;
 					ground.IsGrounded = height >= -downwardReach - probe.Skin && height <= contactDistance + probe.Skin;
 				}

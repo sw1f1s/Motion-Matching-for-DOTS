@@ -1,5 +1,9 @@
 using ColInt.MMD.Actions.Components;
 using ColInt.MMD.Database.Components;
+using ColInt.MMD.Database.Data;
+using ColInt.MMD.Database.Helpers;
+using ColInt.MMD.Editor.Baking;
+using ColInt.MMD.Editor.Diagnostics;
 using ColInt.MMD.Playback.Components;
 using ColInt.MMD.RootMotion.Components;
 using ColInt.MMD.Samples.Character.Configurations;
@@ -18,6 +22,7 @@ using Unity.Mathematics;
 using Unity.Physics;
 using Unity.Transforms;
 using UnityEditor;
+using UnityEngine;
 using Object = UnityEngine.Object;
 
 namespace ColInt.MMD.Tests {
@@ -326,6 +331,13 @@ namespace ColInt.MMD.Tests {
 					Assert.That(action.ActionId, Is.Zero);
 					Assert.That(database.Value.Clips[playback.ClipIndex].Loop, Is.True, "Stopped traversal must settle into looping Idle.");
 					Assert.That(math.distance(position.xz, target.End.xz), Is.LessThan(0.15f));
+					var poses = manager.GetBuffer<MmdLocalPose>(_character);
+					var transform = manager.GetComponentData<LocalTransform>(_character);
+					var contact = manager.GetComponentData<MmdSampleFootContact>(_character);
+					AssertFootOutsideObstacle(position + math.rotate(transform.Rotation, BonePosition(ref database.Value, poses, database.Value.LeftFootBone)), target);
+					AssertFootOutsideObstacle(position + math.rotate(transform.Rotation, BonePosition(ref database.Value, poses, database.Value.RightFootBone)), target);
+					AssertFootOutsideObstacle(position + math.rotate(transform.Rotation, BonePosition(ref database.Value, poses, contact.LeftToe)), target);
+					AssertFootOutsideObstacle(position + math.rotate(transform.Rotation, BonePosition(ref database.Value, poses, contact.RightToe)), target);
 				}
 				previous = position;
 			}
@@ -534,9 +546,11 @@ namespace ColInt.MMD.Tests {
 			Assert.That(manager.GetComponentData<LocalTransform>(_character).Position.y, Is.EqualTo(1.4f).Within(0.08f));
 		}
 
-		[Test]
-		public void RunningClimbStopsAtTheNearEdgeWithoutAnExtraForwardExtension() {
-			Obstacle(2.5f, 3f);
+		[TestCase(2f)]
+		[TestCase(2.5f)]
+		[TestCase(3f)]
+		public void RunningClimbStopsAtTheNearEdgeWithoutAnExtraForwardExtension(float height) {
+			Obstacle(height, 3f);
 			CreateCharacter(float3.zero);
 			Advance(30);
 			_sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Run = true, JumpPressed = true });
@@ -545,10 +559,19 @@ namespace ColInt.MMD.Tests {
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleClimb>>(_character), Is.True);
 			Assert.That(manager.GetComponentData<MmdSampleTraversalProgress>(_character).Clip.EntrySpeed, Is.GreaterThan(3f));
 			var target = manager.GetComponentData<MmdSampleTraversalTarget>(_character);
-			Assert.That(target.End.z, Is.InRange(1.25f, 1.4f), "The destination must sit just inside the ledge, independent of approach speed.");
+			Assert.That(target.End.z, Is.InRange(1f, 1.1f), "The stop must remain at the edge instead of adding a full capsule radius to the landing depth.");
 			_sample.SetInput(default);
 			FinishSmoothTraversal();
-			Assert.That(manager.GetComponentData<LocalTransform>(_character).Position.z, Is.EqualTo(target.End.z).Within(0.1f));
+			Assert.That(manager.GetComponentData<LocalTransform>(_character).Position.z, Is.EqualTo(target.End.z).Within(0.05f));
+			float3 stopped = manager.GetComponentData<LocalTransform>(_character).Position;
+			for (int tick = 0; tick < 60; tick++) {
+				_sample.Tick();
+				float3 position = manager.GetComponentData<LocalTransform>(_character).Position;
+				Assert.That(position.z, Is.InRange(1f, 1.1f), "Released input must not inherit extra forward displacement after the climb.");
+				Assert.That(math.distance(position.xz, stopped.xz), Is.LessThan(0.03f));
+				Assert.That(position.y, Is.EqualTo(height).Within(0.08f));
+				Assert.That(manager.HasComponent<MmdSampleState<MmdSampleFall>>(_character), Is.False);
+			}
 		}
 
 		[Test]
@@ -608,7 +631,8 @@ namespace ColInt.MMD.Tests {
 		[TestCase(false)]
 		[TestCase(true)]
 		public void OrdinaryJumpWaitsUntilNearTheWallBeforeCatchingIt(bool run) {
-			Obstacle(2.9f, 3f);
+			float height = _configuration.Traversal.MaximumHeight + 0.1f;
+			Obstacle(height, 3f);
 			CreateCharacter(new float3(0f, 0f, 0.25f));
 			Advance(30);
 			var manager = _sample.World.EntityManager;
@@ -634,7 +658,8 @@ namespace ColInt.MMD.Tests {
 
 		[Test]
 		public void BufferedSpaceCatchesTallWallWhileTheInitialJumpIsStillRising() {
-			Obstacle(2.9f, 3f);
+			float height = _configuration.Traversal.MaximumHeight + 0.1f;
+			Obstacle(height, 3f);
 			CreateCharacter(new float3(0f, 0f, 0.66f));
 			Advance(30);
 			_sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), JumpPressed = true });
@@ -648,7 +673,123 @@ namespace ColInt.MMD.Tests {
 			Assert.That(manager.GetComponentData<MmdSampleJumpIntent>(_character).TraversalRemaining, Is.Zero);
 			_sample.SetInput(default);
 			FinishSmoothTraversal();
-			Assert.That(manager.GetComponentData<LocalTransform>(_character).Position.y, Is.EqualTo(2.9f).Within(0.08f));
+			Assert.That(manager.GetComponentData<LocalTransform>(_character).Position.y, Is.EqualTo(height).Within(0.08f));
+		}
+
+		[TestCase(2f, 0f, 0f, "M_Neutral_Traversal_Climb_Start_2_5_run_F_Lfoot")]
+		[TestCase(2.5f, 0f, 0f, "M_Neutral_Traversal_Climb_Start_2_5_run_F_Lfoot")]
+		[TestCase(3f, 0f, 0f, "M_Neutral_Traversal_Climb_Start_2_5_run_F_Lfoot")]
+		[TestCase(2f, 0.66f, 0.55f, "M_Neutral_Traversal_Climb_Start_2_5_run_F_Rfoot")]
+		[TestCase(2.5f, 0.66f, 0.55f, "M_Neutral_Traversal_Climb_Start_2_5_run_F_Rfoot")]
+		[TestCase(3f, 0.66f, 0.55f, "M_Neutral_Traversal_Climb_Start_2_5_run_F_Rfoot")]
+		public void ClimbContactFollowsTheActualLedge(float height, float startDistance, float yaw, string clipName) {
+			quaternion rotation = quaternion.RotateY(yaw);
+			float3 forward = math.forward(rotation);
+			Entity obstacle = AddBox(math.rotate(rotation, new float3(0f, height * 0.5f, 2.5f)), new float3(3f, height, 3f));
+			var manager = _sample.World.EntityManager;
+			var obstacleTransform = manager.GetComponentData<LocalTransform>(obstacle);
+			obstacleTransform.Rotation = rotation;
+			manager.SetComponentData(obstacle, obstacleTransform);
+			_character = _sample.Characters.Create(_configuration, LocalTransform.FromPositionRotation(forward * startDistance, rotation), true, false);
+			Advance(30);
+			var data = manager.GetComponentData<MmdDatabase>(_character).Value;
+			var rig = AssetDatabase.LoadAssetAtPath<MotionBakeConfiguration>("Assets/Packages/com.collint.mmd/Samples/Configurations/SampleBakeConfiguration.asset").Rig;
+			var animator = rig.GetComponent<Animator>();
+			int left = HumanoidBone(ref data.Value, animator, HumanBodyBones.LeftHand);
+			int right = HumanoidBone(ref data.Value, animator, HumanBodyBones.RightHand);
+			int leftToe = HumanoidBone(ref data.Value, animator, HumanBodyBones.LeftToes);
+			int rightToe = HumanoidBone(ref data.Value, animator, HumanBodyBones.RightToes);
+			var catalogs = new MmdDebugCatalogStore();
+			catalogs.Reload();
+			int forced = System.Array.IndexOf(catalogs.Resolve(data).Names, clipName);
+			Assert.That(forced, Is.GreaterThanOrEqualTo(0));
+			var profiles = manager.GetBuffer<MmdSampleTraversalClip>(_character);
+			int action = manager.GetComponentData<MmdSampleClimb>(_character).ActionId;
+			int anchors = 0;
+			for (int index = profiles.Length - 1; index >= 0; index--) {
+				if (profiles[index].ActionId == action) {
+					Assert.That(profiles[index].ContactTime, Is.GreaterThan(profiles[index].LiftTime), "Every climb entry must identify its authored hand plant.");
+					Assert.That(profiles[index].ContactTime, Is.LessThan(profiles[index].PeakTime));
+					anchors++;
+					if (profiles[index].ClipIndex != forced) {
+						profiles.RemoveAt(index);
+					}
+				}
+			}
+			Assert.That(anchors, Is.EqualTo(6));
+			_sample.SetInput(new MmdSampleInput { Movement = forward.xz, Run = true, JumpPressed = true });
+			_sample.Tick();
+			Assert.That(manager.HasComponent<MmdSampleTraversalActive>(_character), Is.True);
+			_sample.SetInput(default);
+			var chosen = manager.GetComponentData<MmdSampleTraversalProgress>(_character).Clip;
+			var target = manager.GetComponentData<MmdSampleTraversalTarget>(_character);
+			float3 previous = manager.GetComponentData<LocalTransform>(_character).Position;
+			int contactSamples = 0;
+			for (int tick = 0; tick < 240 && manager.HasComponent<MmdSampleTraversalActive>(_character); tick++) {
+				_sample.Tick();
+				var playback = manager.GetComponentData<MmdPlayback>(_character);
+				var transform = manager.GetComponentData<LocalTransform>(_character);
+				Assert.That(math.distance(previous, transform.Position), Is.LessThan(0.3f), "Warping must preserve continuous root movement.");
+				previous = transform.Position;
+				var displayed = manager.GetBuffer<MmdLocalPose>(_character);
+				float3 leftFoot = transform.Position + math.rotate(transform.Rotation, BonePosition(ref data.Value, displayed, data.Value.LeftFootBone));
+				float3 rightFoot = transform.Position + math.rotate(transform.Rotation, BonePosition(ref data.Value, displayed, data.Value.RightFootBone));
+				float3 leftBall = transform.Position + math.rotate(transform.Rotation, BonePosition(ref data.Value, displayed, leftToe));
+				float3 rightBall = transform.Position + math.rotate(transform.Rotation, BonePosition(ref data.Value, displayed, rightToe));
+				AssertFootOutsideObstacle(leftFoot, target);
+				AssertFootOutsideObstacle(rightFoot, target);
+				AssertFootOutsideObstacle(leftBall, target);
+				AssertFootOutsideObstacle(rightBall, target);
+				if (playback.Time >= chosen.ContactTime + 0.05f && playback.Time <= chosen.ContactTime + 0.25f) {
+					var poses = manager.GetBuffer<MmdLocalPose>(_character);
+					float3 hands = (BonePosition(ref data.Value, poses, left) + BonePosition(ref data.Value, poses, right)) * 0.5f;
+					float3 world = transform.Position + math.rotate(transform.Rotation, hands);
+					Assert.That(world.y, Is.EqualTo(target.Ledge.y).Within(0.15f), "The hand plant must follow the real height rather than the authored 2.5 m height.");
+					Assert.That(math.abs(math.dot(world - target.Ledge, forward)), Is.LessThan(0.15f), "The hands must reach the wall edge from both distant and close approaches.");
+					contactSamples++;
+				}
+			}
+			Assert.That(contactSamples, Is.GreaterThan(5));
+			Assert.That(manager.HasComponent<MmdSampleTraversalActive>(_character), Is.False);
+			for (int tick = 0; tick < 45; tick++) {
+				_sample.Tick();
+				var transform = manager.GetComponentData<LocalTransform>(_character);
+				var poses = manager.GetBuffer<MmdLocalPose>(_character);
+				AssertFootOutsideObstacle(transform.Position + math.rotate(transform.Rotation, BonePosition(ref data.Value, poses, data.Value.LeftFootBone)), target);
+				AssertFootOutsideObstacle(transform.Position + math.rotate(transform.Rotation, BonePosition(ref data.Value, poses, data.Value.RightFootBone)), target);
+				AssertFootOutsideObstacle(transform.Position + math.rotate(transform.Rotation, BonePosition(ref data.Value, poses, leftToe)), target);
+				AssertFootOutsideObstacle(transform.Position + math.rotate(transform.Rotation, BonePosition(ref data.Value, poses, rightToe)), target);
+			}
+			var finish = manager.GetComponentData<LocalTransform>(_character).Position;
+			Assert.That(finish.y, Is.EqualTo(height).Within(0.08f));
+			Assert.That(math.dot(finish, forward), Is.InRange(1f, 1.1f), "The climb must settle at the ledge without a capsule-radius run-out.");
+			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleLocomotion>>(_character), Is.True);
+		}
+
+		private static void AssertFootOutsideObstacle(float3 point, in MmdSampleTraversalTarget target) {
+			float clearance = math.max(point.y - target.Ledge.y, -math.dot(point - target.Ledge, math.forward(target.Rotation)));
+			Assert.That(clearance, Is.GreaterThanOrEqualTo(-0.005f), "Knees, ankles and toes must stay outside the front face until they clear the ledge's top.");
+		}
+
+		private static int HumanoidBone(ref MotionDatabase database, Animator animator, HumanBodyBones boneType) {
+			string path = AnimationUtility.CalculateTransformPath(animator.GetBoneTransform(boneType), animator.transform);
+			int hash = BonePathHash.Calculate(path);
+			for (int bone = 0; bone < database.Parents.Length; bone++) {
+				if (database.BoneNameHashes[bone] == hash) {
+					return bone;
+				}
+			}
+			Assert.Fail(path);
+			return -1;
+		}
+
+		private static float3 BonePosition(ref MotionDatabase database, DynamicBuffer<MmdLocalPose> poses, int bone) {
+			float3 position = float3.zero;
+			for (int current = bone; current >= 0; current = database.Parents[current]) {
+				var pose = poses[current].Value;
+				position = pose.Position + math.rotate(pose.Rotation, position * pose.Scale);
+			}
+			return position;
 		}
 
 		private void FinishSmoothTraversal() {

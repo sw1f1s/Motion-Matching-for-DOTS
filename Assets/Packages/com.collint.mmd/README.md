@@ -68,7 +68,7 @@ Installers находятся в `ColInt.MMD.Lifecycle.Helpers`, `.Physics.Helpe
 | `Actions / MmdActionRequest`, `MmdActionState`, `MmdActionWarp` | Запрос действия, результат и необязательная подгонка root motion к целевой точке. Добавьте все три и для обычного playback; `ActionId = 0`, `PreferredClip = -1`, warp выключен. |
 | `Lifecycle / MmdFault` | Результат проверки запроса/поиска, в том числе отсутствие кандидатов. |
 | `Presentation / MmdSkeletonBone`, `MmdModelMatrix` (буферы) | Иерархия костей и вычисляемые модельные матрицы для рендера. |
-| `Playback / MmdInertialization`, `MmdInertializationState`, `MmdInertialPose` (буфер) | Необязательное сглаживание. Добавьте вместе; задайте `PoseDuration`, `StationaryPoseDuration`, `RootDuration` в секундах. |
+| `Playback / MmdInertialization`, `MmdInertializationState`, `MmdInertialPose` (буфер) | Необязательное сглаживание. Добавьте вместе; задайте `PoseDuration`, `StationaryPoseDuration`, `RootDuration` в секундах. `StationaryPoseTags` — маска групп idle для сохранения положения стоп; `0` отключает выравнивание. Не включайте сюда воздушные клипы. |
 | `RootMotion / MmdKinematicRoot` | Прямое применение root motion к `LocalTransform`. |
 | `Physics / MmdPhysicsRoot` | Применение root motion через `PhysicsVelocity`; нужны компоненты физического тела. Выберите один способ движения. |
 | `Physics / MmdGroundMovement`, `MmdTrajectoryEnvironment` | Необязательная обработка поверхности, ступеней и препятствий; требует collider персонажа и мировой физики. |
@@ -96,9 +96,11 @@ GPU-префаб должен иметь `MmdGpuCharacterAuthoring` на кор�
 
 ## Примеры и отладка
 
-- [MMDSampleEnvironment](Samples/Scenes/MMDSampleEnvironment.unity) — интеграция с управлением персонажем, локомоцией, приседом, прыжком, падением, приземлением и Traversal. Эта игровая логика находится в `Samples/Scripts/Character/Movement`.
+- [MMDSampleEnvironment](Samples/Scenes/MMDSampleEnvironment.unity) — интеграция с управлением персонажем, локомоцией, приседом, спринтом, слайдом, прыжком, падением, приземлением и Traversal. Эта игровая логика находится в `Samples/Scripts/Character/Movement`.
 - [MMDSampleBenchmark](Samples/Scenes/MMDSampleBenchmark.unity) — множество персонажей с одной базой и GPU-префабом. Количество, seed и область движения задаются на **Benchmark Characters**; каждый персонаж получает своё намерение через `MmdSampleCharacterInputOverride`.
 - [MmdSampleWorld](Samples/Scripts/Lifecycle/MmdSampleWorld.cs) и [MmdSampleCharacterFactory](Samples/Scripts/Character/Helpers/MmdSampleCharacterFactory.cs) — примеры подключения систем, создания сущностей и освобождения ресурсов.
+
+Управление Sample: **WASD** — движение относительно камеры, **X** — переключение ходьба/бег (по умолчанию бег), **Shift** — спринт и выход из присяда, **Ctrl** — переключение присяда. Нажатие Ctrl во время спринта запускает слайд: на ровной поверхности он тормозит и переходит в присяд, на спуске сохраняет скорость и ускоряется под действием уклона. Скорости и параметры слайда задаются в `MmdSampleCharacterConfiguration`. **Space** — прыжок или Traversal.
 
 В своём проекте используйте собственный мир и игровые системы. Для переноса Sample-геометрии в другой проект выполните **Bake World Physics** на компоненте `MmdSampleWorldPhysicsGeometry`: кеш зависит от версии Unity и физических пакетов.
 

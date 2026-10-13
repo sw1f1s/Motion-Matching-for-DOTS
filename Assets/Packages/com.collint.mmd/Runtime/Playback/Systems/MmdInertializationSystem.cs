@@ -62,26 +62,32 @@ namespace ColInt.MMD.Playback.Systems {
 					int parent = database.Parents[bone];
 					quaternion targetModel = parent < 0 ? target.Rotation : math.mul(history[parent].TargetModelRotation, target.Rotation);
 					quaternion previousTargetModel = parent < 0 ? previousTarget.Rotation : math.mul(history[parent].PreviousTargetModelRotation, previousTarget.Rotation);
-					quaternion previousDisplayedModel = hasHistory ? entry.DisplayedModelRotation : previousTargetModel;
+					// Root anchors retain model-space heading compensation. Descendant joints
+					// blend locally so a rotating thigh cannot add twist to its knee.
+					bool modelSpace = parent < 0 || database.Parents[parent] < 0;
+					quaternion targetRotation = modelSpace ? targetModel : target.Rotation;
+					quaternion previousTargetRotation = modelSpace ? previousTargetModel : previousTarget.Rotation;
+					quaternion previousDisplayedRotation = hasHistory
+						? modelSpace ? entry.DisplayedModelRotation : entry.Previous.Rotation : previousTargetRotation;
 					if (switched) {
 						entry.PositionOffset = entry.Previous.Position - previousTarget.Position;
-						// Blend the resulting model orientation: compensating root/child turns must not add a second spin.
-						entry.RotationOffset = MmdAnimationMath.RotationVector(math.mul(previousDisplayedModel, math.inverse(previousTargetModel)));
+						entry.RotationOffset = MmdAnimationMath.RotationVector(math.mul(previousDisplayedRotation, math.inverse(previousTargetRotation)));
 						entry.ScaleOffset = entry.Previous.Scale - previousTarget.Scale;
 						entry.PositionVelocityOffset = entry.PositionVelocity - (target.Position - previousTarget.Position) / DeltaTime;
-						entry.AngularVelocityOffset = entry.AngularVelocity - MmdAnimationMath.RotationVector(math.mul(targetModel, math.inverse(previousTargetModel))) / DeltaTime;
+						entry.AngularVelocityOffset = entry.AngularVelocity - MmdAnimationMath.RotationVector(math.mul(targetRotation, math.inverse(previousTargetRotation))) / DeltaTime;
 						entry.ScaleVelocityOffset = entry.ScaleVelocity - (target.Scale - previousTarget.Scale) / DeltaTime;
 					}
 					target.Position += MmdAnimationMath.Decay(entry.PositionOffset, entry.PositionVelocityOffset, state.Elapsed, state.PoseDuration);
-					quaternion displayedModel = math.normalize(math.mul(MmdAnimationMath.Rotation(MmdAnimationMath.Decay(entry.RotationOffset,
-						entry.AngularVelocityOffset, state.Elapsed, state.PoseDuration)), targetModel));
-					target.Rotation = parent < 0 ? displayedModel : math.normalize(math.mul(math.inverse(history[parent].DisplayedModelRotation), displayedModel));
+					quaternion displayedRotation = math.normalize(math.mul(MmdAnimationMath.Rotation(MmdAnimationMath.DecayRotation(entry.RotationOffset,
+						entry.AngularVelocityOffset, state.Elapsed, state.PoseDuration)), targetRotation));
+					target.Rotation = modelSpace && parent >= 0
+						? math.normalize(math.mul(math.inverse(history[parent].DisplayedModelRotation), displayedRotation)) : displayedRotation;
 					target.Scale += MmdAnimationMath.Decay(entry.ScaleOffset, entry.ScaleVelocityOffset, state.Elapsed, state.PoseDuration);
 					entry.PositionVelocity = (target.Position - entry.Previous.Position) / DeltaTime;
-					entry.AngularVelocity = MmdAnimationMath.RotationVector(math.mul(displayedModel, math.inverse(previousDisplayedModel))) / DeltaTime;
+					entry.AngularVelocity = MmdAnimationMath.RotationVector(math.mul(displayedRotation, math.inverse(previousDisplayedRotation))) / DeltaTime;
 					entry.TargetModelRotation = targetModel;
 					entry.PreviousTargetModelRotation = previousTargetModel;
-					entry.DisplayedModelRotation = displayedModel;
+					entry.DisplayedModelRotation = parent < 0 ? target.Rotation : math.mul(history[parent].DisplayedModelRotation, target.Rotation);
 					entry.ScaleVelocity = (target.Scale - entry.Previous.Scale) / DeltaTime;
 					entry.Previous = target;
 					history[bone] = entry;
@@ -122,6 +128,7 @@ namespace ColInt.MMD.Playback.Systems {
 				float3 offset = float3.zero;
 				bool stationaryLoop = settings.PoseDuration > 0f && database.FeatureCount == LocomotionSchema.Dimension &&
 					action.ActionId == 0 && database.Clips[playback.ClipIndex].Loop &&
+					(database.Clips[playback.ClipIndex].Tags & settings.StationaryPoseTags) != 0 &&
 					math.lengthsq(state.RootVelocity.xz) <= 0.0025f &&
 					math.lengthsq(motion.Translation.xz / DeltaTime) <= 0.0025f;
 				state.PoseDuration = stationaryLoop ? math.max(settings.PoseDuration, settings.StationaryPoseDuration) : settings.PoseDuration;

@@ -44,8 +44,8 @@ ModelImporter:
       name: M_Neutral_Slide_FootOut_Into_Lfoot
       takeName: Unreal Take
       internalID: 8993902097722301239
-      firstFrame: 0
-      lastFrame: 182
+      firstFrame: 18
+      lastFrame: 48
       wrapMode: 0
       orientationOffsetY: 0
       level: 0

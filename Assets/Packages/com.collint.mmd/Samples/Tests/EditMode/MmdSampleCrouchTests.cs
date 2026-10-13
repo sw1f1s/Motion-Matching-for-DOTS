@@ -4,6 +4,7 @@ using ColInt.MMD.Database.Helpers;
 using ColInt.MMD.Lifecycle.Components;
 using ColInt.MMD.MotionMatching.Components;
 using ColInt.MMD.Playback.Components;
+using ColInt.MMD.RootMotion.Components;
 using ColInt.MMD.Samples.Character.Components;
 using ColInt.MMD.Samples.Character.Configurations;
 using ColInt.MMD.Samples.Character.Input.Components;
@@ -46,6 +47,96 @@ namespace ColInt.MMD.Tests {
 			Object.DestroyImmediate(_configuration);
 		}
 
+		[TestCase(false)]
+		[TestCase(true)]
+		public void SettledCrouchCruisesInAGaitCycleAtTheConfiguredSpeed(bool run) {
+			_sample.SetInput(new MmdSampleInput { Crouch = true });
+			Advance(210);
+			_sample.SetInput(new MmdSampleInput { Crouch = true, Movement = new float2(0f, 1f), Run = run });
+			Advance(120);
+			var manager = _sample.World.EntityManager;
+			float distance = 0f;
+			for (int tick = 0; tick < 240; tick++) {
+				_sample.Tick();
+				var database = manager.GetComponentData<MmdDatabase>(_character).Value;
+				var playback = manager.GetComponentData<MmdPlayback>(_character);
+				Assert.That(database.Value.Clips[playback.ClipIndex].Loop, Is.True, "Cruising must not splice unrelated turn or pivot tails.");
+				Assert.That(playback.Speed, Is.EqualTo(_configuration.Crouch.Speed / _configuration.Crouch.AnimationSpeed).Within(0.001f));
+				distance += math.length(manager.GetComponentData<PhysicsVelocity>(_character).Linear.xz) * Timestep;
+				AssertHealthy();
+			}
+			Assert.That(distance / (240f * Timestep), Is.EqualTo(_configuration.Crouch.Speed).Within(_configuration.Crouch.Speed * 0.1f));
+		}
+
+		[TestCase(-1f)]
+		[TestCase(1f)]
+		public void AlignedCrouchReversalsDoNotRestartTurnTailsOrSwayTheRoot(float side) {
+			_sample.SetInput(new MmdSampleInput { Crouch = true });
+			Advance(210);
+			_sample.SetInput(new MmdSampleInput { Crouch = true, Movement = new float2(0f, 1f) });
+			Advance(120);
+			var manager = _sample.World.EntityManager;
+			foreach (float angle in new[] { side * math.PI / 2f, -side * math.PI / 2f, math.PI, 0f }) {
+				var direction = new float2(math.sin(angle), math.cos(angle));
+				_sample.SetInput(new MmdSampleInput { Crouch = true, Movement = direction });
+				for (int tick = 0; tick < 90; tick++) {
+					_sample.Tick();
+					if (tick >= 45) {
+						var database = manager.GetComponentData<MmdDatabase>(_character).Value;
+						var playback = manager.GetComponentData<MmdPlayback>(_character);
+						Assert.That(database.Value.Clips[playback.ClipIndex].Loop, Is.True, "Aligned movement must keep its gait instead of restarting a turn tail.");
+					}
+					if (tick >= 60) {
+						var motion = manager.GetComponentData<MmdRootMotion>(_character);
+						Assert.That(math.abs(motion.Translation.x), Is.LessThan(0.001f), "Settled forward strides must not add lateral root motion.");
+					}
+					AssertHealthy();
+				}
+			}
+		}
+
+		[TestCase(-1f)]
+		[TestCase(1f)]
+		public void CrouchedCameraOrbitPreservesAContinuousStrideAndReturnsToCruising(float side) {
+			_sample.SetInput(new MmdSampleInput { Crouch = true });
+			Advance(210);
+			_sample.SetInput(new MmdSampleInput { Crouch = true, Movement = new float2(0f, 1f) });
+			Advance(120);
+			var manager = _sample.World.EntityManager;
+			var previousFeet = new float3[2];
+			var models = new float4x4[manager.GetBuffer<MmdLocalPose>(_character).Length];
+			for (int tick = 0; tick < 300; tick++) {
+				float angle = side * math.min(math.PI, tick / 120f * math.PI);
+				var direction = new float2(math.sin(angle), math.cos(angle));
+				_sample.SetInput(new MmdSampleInput { Crouch = true, Movement = direction });
+				_sample.Tick();
+				var database = manager.GetComponentData<MmdDatabase>(_character).Value;
+				var transform = manager.GetComponentData<LocalTransform>(_character);
+				var poses = manager.GetBuffer<MmdLocalPose>(_character);
+				for (int bone = 0; bone < models.Length; bone++) {
+					var pose = poses[bone].Value;
+					var local = float4x4.TRS(pose.Position, pose.Rotation, pose.Scale);
+					int parent = database.Value.Parents[bone];
+					models[bone] = parent < 0 ? local : math.mul(models[parent], local);
+				}
+				for (int foot = 0; foot < 2; foot++) {
+					int bone = foot == 0 ? database.Value.LeftFootBone : database.Value.RightFootBone;
+					float3 world = transform.Position + math.rotate(transform.Rotation, models[bone].c3.xyz);
+					if (tick > 0) {
+						Assert.That(math.distance(world, previousFeet[foot]), Is.LessThan(0.1f), "A turn must not jump to another foot phase.");
+					}
+					previousFeet[foot] = world;
+				}
+				float error = math.abs(ColInt.MMD.Samples.Character.Movement.Facing.Helpers.MmdSampleFacing.YawError(transform.Rotation, direction));
+				Assert.That(error, Is.LessThan(math.radians(15f)));
+				AssertHealthy();
+			}
+			var finalDatabase = manager.GetComponentData<MmdDatabase>(_character).Value;
+			var finalPlayback = manager.GetComponentData<MmdPlayback>(_character);
+			Assert.That(finalDatabase.Value.Clips[finalPlayback.ClipIndex].Loop, Is.True);
+			Assert.That(math.length(manager.GetComponentData<PhysicsVelocity>(_character).Linear.xz), Is.InRange(_configuration.Crouch.Speed * 0.85f, _configuration.Crouch.Speed * 1.15f));
+		}
+
 		[TestCase(0)]
 		[TestCase(1)]
 		[TestCase(2)]
@@ -55,6 +146,7 @@ namespace ColInt.MMD.Tests {
 			Advance(90);
 			var manager = _sample.World.EntityManager;
 			var standing = manager.GetComponentData<MmdSampleCharacterControl>(_character);
+			float standingDirectionWeight = manager.GetComponentData<MmdSearchSettings>(_character).TrajectoryDirectionWeight;
 			var smoothing = manager.GetComponentData<MmdInertialization>(_character);
 			input.Crouch = true;
 			_sample.SetInput(input);
@@ -90,6 +182,7 @@ namespace ColInt.MMD.Tests {
 			Advance(210);
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleLocomotion>>(_character), Is.True);
 			Assert.That(manager.GetComponentData<MmdSampleCharacterControl>(_character), Is.EqualTo(standing));
+			Assert.That(manager.GetComponentData<MmdSearchSettings>(_character).TrajectoryDirectionWeight, Is.EqualTo(standingDirectionWeight));
 			Assert.That(manager.GetComponentData<MmdInertialization>(_character), Is.EqualTo(smoothing));
 			Assert.That(manager.GetComponentData<PhysicsCollider>(_character).Value, Is.EqualTo(owner.Value));
 			AssertHealthy();
@@ -170,22 +263,38 @@ namespace ColInt.MMD.Tests {
 		}
 
 		[Test]
-		public void MovementCanInterruptTheHeldTailOfStationaryEnterAndExit() {
+		public void MovementInterruptsStationaryEnterAndExitOnTheNextTick() {
 			_sample.SetInput(new MmdSampleInput { Crouch = true });
-			Advance(30);
+			Advance(1);
 			_sample.SetInput(new MmdSampleInput { Crouch = true, Movement = new float2(0f, 1f) });
-			Advance(2);
+			Advance(1);
 			var manager = _sample.World.EntityManager;
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleCrouch>>(_character), Is.True);
 			Assert.That(manager.GetComponentData<MmdActionState>(_character).ActionId, Is.Zero);
 			_sample.SetInput(new MmdSampleInput { Crouch = true });
 			Advance(120);
 			_sample.SetInput(default);
-			Advance(30);
+			Advance(1);
 			_sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Run = true });
-			Advance(2);
+			Advance(1);
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleLocomotion>>(_character), Is.True);
 			Assert.That(manager.GetComponentData<MmdActionState>(_character).ActionId, Is.Zero);
+			AssertHealthy();
+		}
+
+		[TestCase(false)]
+		[TestCase(true)]
+		public void SprintStandingIntentInterruptsCrouchWithClearHeadroom(bool settled) {
+			_sample.SetInput(new MmdSampleInput { Crouch = true });
+			Advance(settled ? 210 : 1);
+			_sample.SetInput(new MmdSampleInput { Sprint = true, Run = true, Movement = new float2(0f, 1f) });
+			_sample.Tick();
+			var manager = _sample.World.EntityManager;
+			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleCrouchExit>>(_character), Is.True);
+			_sample.Tick();
+			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleLocomotion>>(_character), Is.True);
+			Assert.That(manager.GetComponentData<MmdSampleMovement>(_character).CrouchCollider, Is.False);
+			Assert.That(manager.GetComponentData<MmdSampleCharacterControl>(_character).SprintSpeed, Is.EqualTo(_configuration.Locomotion.SprintSpeed));
 			AssertHealthy();
 		}
 
@@ -195,7 +304,7 @@ namespace ColInt.MMD.Tests {
 			Advance(210);
 			AddBox(new float3(0f, 1.6f, 0f), new float3(4f, 0.5f, 4f));
 			Advance(2);
-			_sample.SetInput(default);
+			_sample.SetInput(new MmdSampleInput { Sprint = true });
 			Advance(90);
 			var manager = _sample.World.EntityManager;
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleCrouch>>(_character), Is.True);
@@ -268,6 +377,44 @@ namespace ColInt.MMD.Tests {
 			Assert.Throws<System.InvalidOperationException>(() => { var value = owner.Value.Value; });
 			Assert.Throws<System.InvalidOperationException>(() => { var value = owner.Crouched.Value; });
 			Assert.Throws<System.InvalidOperationException>(() => { var value = owner.Traversal.Value; });
+		}
+
+		[TestCase(12)]
+		[TestCase(36)]
+		[TestCase(90)]
+		public void SharpCrouchTurnsKeepBodyAndRootStable(int interval) {
+			_sample.SetInput(new MmdSampleInput { Crouch = true });
+			Advance(210);
+			_sample.SetInput(new MmdSampleInput { Crouch = true, Movement = new float2(0f, 1f) });
+			Advance(120);
+			var manager = _sample.World.EntityManager;
+			var data = manager.GetComponentData<MmdDatabase>(_character).Value;
+			int hips = -1;
+			for (int bone = 0; bone < data.Value.Parents.Length; bone++) {
+				if (data.Value.BoneNameHashes[bone] == BonePathHash.Calculate("root/pelvis")) {
+					hips = bone;
+				}
+			}
+			Assert.That(hips, Is.GreaterThanOrEqualTo(0));
+			float3 upAxis = math.rotate(math.inverse(ModelRotation(ref data.Value, hips)), new float3(0f, 1f, 0f));
+			float3 previous = manager.GetBuffer<MmdLocalPose>(_character)[0].Value.Position;
+			float minimumSide = previous.x;
+			float maximumSide = previous.x;
+			for (int tick = 0; tick < 360; tick++) {
+				float angle = (tick / interval) % 2 == 0 ? math.PI * 0.75f : -math.PI * 0.75f;
+				var direction = new float2(math.sin(angle), math.cos(angle));
+				_sample.SetInput(new MmdSampleInput { Crouch = true, Run = true, Movement = direction });
+				_sample.Tick();
+				var pose = manager.GetBuffer<MmdLocalPose>(_character)[0].Value.Position;
+				float3 up = math.rotate(ModelRotation(ref data.Value, hips), upAxis);
+				Assert.That(math.abs(math.atan2(up.x, up.y)), Is.LessThan(math.radians(15f)), "Moving turns must not splice the tilted recovery of a stationary pivot.");
+				Assert.That(math.distance(previous, pose), Is.LessThan(0.08f), "The displayed body must remain continuous through a turn.");
+				minimumSide = math.min(minimumSide, pose.x);
+				maximumSide = math.max(maximumSide, pose.x);
+				previous = pose;
+				AssertHealthy();
+			}
+			Assert.That(maximumSide - minimumSide, Is.LessThan(0.09f), "Repeated turns must retain a walking stride instead of swaying between pivot tails.");
 		}
 
 		private void AssertCrouchStopsAndResumes() {

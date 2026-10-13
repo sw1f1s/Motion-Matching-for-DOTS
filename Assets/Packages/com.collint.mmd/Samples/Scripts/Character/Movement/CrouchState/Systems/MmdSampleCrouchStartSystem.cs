@@ -20,8 +20,9 @@ namespace ColInt.MMD.Samples.Character.Movement.CrouchState.Systems {
 			if (SystemAPI.GetSingleton<MmdWorldState>().IsPaused) {
 				return;
 			}
-			foreach (var (crouch, movement, request, settings, playback) in SystemAPI.Query<RefRO<MmdSampleCrouch>, RefRW<MmdSampleMovement>, RefRW<MmdActionRequest>,
+			foreach (var (crouch, progress, smoothing, movement, request, settings, playback) in SystemAPI.Query<RefRO<MmdSampleCrouch>, RefRO<MmdSampleCrouchProgress>, RefRW<MmdInertialization>, RefRW<MmdSampleMovement>, RefRW<MmdActionRequest>,
 				RefRW<MmdSearchSettings>, RefRW<MmdPlayback>>().WithAll<MmdSampleStateStarted<MmdSampleCrouch>>()) {
+				smoothing.ValueRW = progress.ValueRO.StandingInertialization;
 				movement.ValueRW = new MmdSampleMovement { CrouchCollider = true };
 				MmdSampleAnimationRequest.Cancel(ref request.ValueRW);
 				settings.ValueRW.RequiredTags = crouch.ValueRO.IdleTags;

@@ -63,7 +63,10 @@ namespace ColInt.MMD.Samples.Character.Movement.TraversalState.Helpers {
 			}
 			// Tall walls always climb onto the ledge; thin low obstacles can be crossed.
 			across &= height <= settings.MantleHeight;
-			float endDepth = across ? depth + settings.Radius + settings.Skin : math.min(settings.Radius + settings.Skin, depth * 0.5f);
+			// A pull-up finishes with the root just inside the supporting edge. The
+			// capsule radius is needed to clear the far face of a crossing, not to
+			// push a character another radius forward after climbing onto the top.
+			float endDepth = across ? depth + settings.Radius + settings.Skin : math.min(settings.Skin, depth * 0.5f);
 			float3 end = face.Position + direction * endDepth;
 			end.y = top.Position.y + settings.Skin;
 			bool supported = true;
@@ -90,7 +93,7 @@ namespace ColInt.MMD.Samples.Character.Movement.TraversalState.Helpers {
 			target = new MmdSampleTraversalTarget {
 				Obstacle = face.Entity, ObstacleTransform = world.Bodies[face.RigidBodyIndex].WorldFromBody,
 				Start = transform.Position, StartRotation = transform.Rotation, Rotation = quaternion.LookRotationSafe(direction, math.up()),
-				Front = front, AboveFront = aboveFront, AboveEnd = aboveEnd, End = end, Height = height, Across = across, Supported = supported
+				Front = front, Ledge = new float3(face.Position.x, top.Position.y, face.Position.z), AboveFront = aboveFront, AboveEnd = aboveEnd, End = end, Height = height, Across = across, Supported = supported
 			};
 			return true;
 		}

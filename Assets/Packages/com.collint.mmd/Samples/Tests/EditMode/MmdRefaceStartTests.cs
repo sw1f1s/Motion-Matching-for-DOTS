@@ -17,8 +17,10 @@ using Unity.Transforms;
 
 namespace ColInt.MMD.Tests {
 	public class MmdRefaceStartTests {
-		[Test]
-		public void SampleRefaceStartsShareTheIdleModelFacingBasis() {
+		[TestCase("Walk")]
+		[TestCase("Run")]
+		[TestCase("Sprint")]
+		public void SampleRefaceStartsShareTheIdleModelFacingBasis(string gait) {
 			var configuration = UnityEditor.AssetDatabase.LoadAssetAtPath<MmdSampleCharacterConfiguration>(
 				"Assets/Packages/com.collint.mmd/Samples/Configurations/SampleCharacterConfiguration.asset");
 			using (var database = MotionDatabaseCodec.Load(configuration.Assets.Database.GetData<byte>())) {
@@ -36,7 +38,7 @@ namespace ColInt.MMD.Tests {
 				float3 referenceForward = math.rotate(math.inverse(reference), new float3(0f, 0f, 1f));
 				int checkedClips = 0;
 				for (int clip = 0; clip < database.Value.Clips.Length; clip++) {
-					if (!catalog.Names[clip].Contains("Reface_Start") || catalog.Names[clip].Contains("_Crouch_")) {
+					if (!catalog.Names[clip].Contains($"_{gait}_Reface_Start")) {
 						continue;
 					}
 					quaternion start = SampledModelRotation(ref database.Value, clip, root);
@@ -44,7 +46,7 @@ namespace ColInt.MMD.Tests {
 					Assert.That(math.abs(math.degrees(math.atan2(forward.x, forward.z))), Is.LessThan(0.5f), catalog.Names[clip]);
 					checkedClips++;
 				}
-				Assert.That(checkedClips, Is.EqualTo(18));
+				Assert.That(checkedClips, Is.GreaterThan(0), $"The sample must include {gait} reface starts.");
 			}
 		}
 

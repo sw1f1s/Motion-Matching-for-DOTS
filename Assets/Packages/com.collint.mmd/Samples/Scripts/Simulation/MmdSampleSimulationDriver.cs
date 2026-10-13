@@ -17,6 +17,9 @@ namespace ColInt.MMD.Samples.Simulation {
 		private float _accumulator;
 		private bool _paused;
 		private bool _pendingJump;
+		private bool _crouching;
+		private bool _running = true;
+		private bool _pendingCrouch;
 
 		public void Init(MmdSampleWorld sample) {
 			Init(sample, null);
@@ -29,6 +32,7 @@ namespace ColInt.MMD.Samples.Simulation {
 			Reset();
 			_activeWorld = sample;
 			_playerCamera = playerCamera;
+			sample.SetInput(new MmdSampleInput { Run = _running });
 		}
 
 		public void Reset() {
@@ -41,6 +45,9 @@ namespace ColInt.MMD.Samples.Simulation {
 			_accumulator = 0f;
 			_paused = false;
 			_pendingJump = false;
+			_crouching = false;
+			_running = true;
+			_pendingCrouch = false;
 		}
 
 		private void Update() {
@@ -55,8 +62,9 @@ namespace ColInt.MMD.Samples.Simulation {
 			}
 			if (_paused || !Application.isFocused) {
 				_pendingJump = false;
+				_pendingCrouch = false;
 			}
-			var input = new MmdSampleInput();
+			var input = new MmdSampleInput { Crouch = _crouching, Run = _running };
 			if (_readPlayerInput && Application.isFocused && !_paused) {
 				if (_playerCamera != null && _playerCamera.isActiveAndEnabled && _playerCamera.IsInitialized) {
 					Vector3 forward = _playerCamera.PlanarRotation * Vector3.forward;
@@ -64,7 +72,11 @@ namespace ColInt.MMD.Samples.Simulation {
 				}
 			}
 			if (_readPlayerInput && Application.isFocused && keyboard != null && !_paused) {
-				input = MmdSampleInputReader.Read(keyboard, input.Facing);
+				input = MmdSampleInputReader.Read(keyboard, input.Facing, _crouching, _running);
+				_crouching = input.Crouch;
+				_running = input.Run;
+				_pendingCrouch |= input.CrouchPressed;
+				input.CrouchPressed = _pendingCrouch;
 				_pendingJump |= input.JumpPressed;
 				input.JumpPressed = _pendingJump;
 			}
@@ -73,6 +85,7 @@ namespace ColInt.MMD.Samples.Simulation {
 			while (_accumulator >= sample.Timestep) {
 				sample.Tick();
 				_pendingJump = false;
+				_pendingCrouch = false;
 				_accumulator -= sample.Timestep;
 			}
 		}

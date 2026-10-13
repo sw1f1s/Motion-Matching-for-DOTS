@@ -1,3 +1,4 @@
+using ColInt.MMD.Samples.Character.Movement.SlideState.Systems;
 using ColInt.MMD.Playback.Systems;
 using ColInt.MMD.Samples.Character.Movement.CrouchState.Systems;
 using ColInt.MMD.Samples.Character.Movement.Facing.Systems;
@@ -20,17 +21,28 @@ namespace ColInt.MMD.Samples.Character.Movement.Shared.Helpers {
 			simulation.AddSystemToUpdateList(entry);
 			var query = world.GetOrCreateSystemManaged<MmdSampleSearchQueryGroup>();
 			query.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleTrajectorySystem>());
+			query.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleSlideTrajectorySystem>());
 			query.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSamplePoseQuerySystem>());
 			simulation.AddSystemToUpdateList(query);
 			var feedback = world.GetOrCreateSystemManaged<MmdSampleMotionFeedbackGroup>();
 			feedback.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSamplePhysicsMotionFeedbackSystem>());
 			simulation.AddSystemToUpdateList(feedback);
+			var poseContact = world.GetOrCreateSystemManaged<MmdSamplePoseContactGroup>();
+			poseContact.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleTraversalFootContactSystem>());
+			poseContact.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleGroundPoseContactSystem>());
+			simulation.AddSystemToUpdateList(poseContact);
 			var traversalTrajectory = world.GetOrCreateSystemManaged<MmdSampleTraversalTrajectoryGroup>();
 			traversalTrajectory.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleTraversalTrajectorySystem>());
 			simulation.AddSystemToUpdateList(traversalTrajectory);
 			var selection = world.GetOrCreateSystemManaged<MmdSampleLocomotionSelectionGroup>();
 			selection.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleLocomotionSelectionSystem>());
 			simulation.AddSystemToUpdateList(selection);
+			var slideAnimation = world.GetOrCreateSystemManaged<MmdSampleSlideAnimationGroup>();
+			slideAnimation.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleSlideExitPlaybackSystem>());
+			simulation.AddSystemToUpdateList(slideAnimation);
+			var slideMotion = world.GetOrCreateSystemManaged<MmdSampleSlideMotionGroup>();
+			slideMotion.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleSlideMotionSystem>());
+			simulation.AddSystemToUpdateList(slideMotion);
 			var facing = world.GetOrCreateSystemManaged<MmdSampleFacingGroup>();
 			facing.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleFacingSystem>());
 			simulation.AddSystemToUpdateList(facing);
@@ -49,6 +61,7 @@ namespace ColInt.MMD.Samples.Character.Movement.Shared.Helpers {
 			ground.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleGroundSystem>());
 			requests.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleTraversalRequestSystem>());
 			requests.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleCrouchRequestSystem>());
+			requests.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleSlideRequestSystem>());
 			requests.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleJumpRequestSystem>());
 			requests.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleFallRequestSystem>());
 			updates.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleMantleUpdateSystem>());
@@ -62,6 +75,8 @@ namespace ColInt.MMD.Samples.Character.Movement.Shared.Helpers {
 			updates.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleCrouchEnterUpdateSystem>());
 			updates.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleCrouchUpdateSystem>());
 			updates.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleCrouchExitUpdateSystem>());
+			updates.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleSlideUpdateSystem>());
+			updates.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleSlideExitUpdateSystem>());
 			updates.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleLocomotionUpdateSystem>());
 			updates.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleJumpUpdateSystem>());
 			updates.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleFallUpdateSystem>());
@@ -78,6 +93,8 @@ namespace ColInt.MMD.Samples.Character.Movement.Shared.Helpers {
 			finish.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleCrouchEnterFinishSystem>());
 			finish.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleCrouchFinishSystem>());
 			finish.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleCrouchExitFinishSystem>());
+			finish.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleSlideFinishSystem>());
+			finish.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleSlideExitFinishSystem>());
 			finish.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleLocomotionFinishSystem>());
 			finish.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleJumpFinishSystem>());
 			finish.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleFallFinishSystem>());
@@ -94,6 +111,8 @@ namespace ColInt.MMD.Samples.Character.Movement.Shared.Helpers {
 			start.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleCrouchEnterStartSystem>());
 			start.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleCrouchStartSystem>());
 			start.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleCrouchExitStartSystem>());
+			start.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleSlideStartSystem>());
+			start.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleSlideExitStartSystem>());
 			start.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleLocomotionStartSystem>());
 			start.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleJumpStartSystem>());
 			start.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleFallStartSystem>());

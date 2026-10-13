@@ -109,17 +109,34 @@ namespace ColInt.MMD.Tests {
 		public void SampleContainsRefaceStartsAndPreservesGaitMasks() {
 			var configuration = AssetDatabase.LoadAssetAtPath<MotionBakeConfiguration>("Assets/Packages/com.collint.mmd/Samples/Configurations/SampleBakeConfiguration.asset");
 			var selection = MotionBakeGroupResolver.Resolve(configuration.Groups);
-			Assert.That(selection.Clips.Length, Is.EqualTo(507));
+			Assert.That(selection.Clips.Length, Is.EqualTo(552));
 			Assert.That(configuration.Groups.Take(5).Select(g => g.Name), Is.EqualTo(new[] { "Idle", "Walk", "Run", "Turn", "Start" }));
-			Assert.That(configuration.Groups.Take(5).Select(g => g.Clips.Length), Is.EqualTo(new[] { 41, 88, 88, 8, 58 }));
-			Assert.That(selection.Clips.Count(c => c.Loop), Is.EqualTo(45));
+			Assert.That(configuration.Groups.Take(5).Select(g => g.Clips.Length), Is.EqualTo(new[] { 41, 88, 88, 8, 68 }));
+			Assert.That(selection.Clips.Count(c => c.Loop), Is.EqualTo(52));
 			Assert.That(selection.Clips.Any(c => c.Clip.name.StartsWith("M_Relaxed_")), Is.False);
-			Assert.That(selection.Clips.Count(c => c.ActionId != 0), Is.EqualTo(64));
+			Assert.That(selection.Clips.Count(c => c.ActionId != 0), Is.EqualTo(68));
 			Assert.That(selection.Clips.Single(c => c.Clip.name == "M_Neutral_Jump_Loop_Fall").Loop, Is.True);
-			Assert.That(selection.Clips.Count(c => c.Clip.name.Contains("Reface_Start")), Is.EqualTo(26));
+			Assert.That(selection.Clips.Count(c => c.Clip.name.Contains("Reface_Start")), Is.EqualTo(30));
 			Assert.That(selection.Clips.Single(c => c.Clip.name == "M_Neutral_Walk_Reface_Start_F_R_180").Tags, Is.EqualTo(18u));
 			Assert.That(selection.Clips.Where(c => c.Clip.name.Contains("Reface_Start")).All(c => !c.Loop && c.ActionId == 0), Is.True);
 			Assert.That(selection.Groups.Take(5).Select(g => g.Tags), Is.EqualTo(new uint[] { 1, 2, 4, 8, 16 }));
+		}
+
+		[Test]
+		public void SampleIncludesBothSlideVariantsWithPairedEntriesAndExits() {
+			var configuration = AssetDatabase.LoadAssetAtPath<MotionBakeConfiguration>("Assets/Packages/com.collint.mmd/Samples/Configurations/SampleBakeConfiguration.asset");
+			var enter = configuration.Groups.Single(g => g.Name == "Slide Enter");
+			var slide = configuration.Groups.Single(g => g.Name == "Slide");
+			Assert.That(enter.Clips.Select(c => c.name), Is.EquivalentTo(new[] {
+				"M_Neutral_Slide_FootOut_Into_Lfoot", "M_Neutral_Slide_FootOut_Into_Rfoot",
+				"M_Neutral_Slide_KneesOut_Into_Lfoot", "M_Neutral_Slide_KneesOut_Into_Rfoot"
+			}));
+			Assert.That(slide.Clips.Select(c => c.name), Is.EquivalentTo(new[] {
+				"M_Neutral_Slide_FootOut_Loop", "M_Neutral_Slide_FootOut_Out_Idle_Crouch",
+				"M_Neutral_Slide_KneesOut_Loop", "M_Neutral_Slide_KneesOut_Out_Idle_Crouch"
+			}));
+			Assert.That(slide.Clips.Count(c => c.isLooping), Is.EqualTo(2));
+			Assert.That(enter.Clips.All(c => !c.isLooping), Is.True);
 		}
 
 		private static AnimationClip CreateClip() {

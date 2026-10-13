@@ -23,10 +23,10 @@ namespace ColInt.MMD.Samples.Character.Movement.CrouchState.Systems {
 				return;
 			}
 			bool moving = math.lengthsq(SystemAPI.GetSingleton<MmdSampleInput>().Movement) > 0.001f;
-			foreach (var (current, crouch, progress, action, transition) in SystemAPI.Query<RefRW<MmdSampleState<MmdSampleCrouchExit>>, RefRO<MmdSampleCrouch>, RefRO<MmdSampleCrouchProgress>,
+			foreach (var (current, progress, action, transition) in SystemAPI.Query<RefRW<MmdSampleState<MmdSampleCrouchExit>>, RefRO<MmdSampleCrouchProgress>,
 				RefRO<MmdActionState>, RefRW<MmdSampleStateTransition>>()) {
 				current.ValueRW.Elapsed += SystemAPI.Time.DeltaTime;
-				if (current.ValueRO.Elapsed >= progress.ValueRO.Duration || moving && current.ValueRO.Elapsed >= crouch.ValueRO.TransitionDuration ||
+				if (current.ValueRO.Elapsed >= progress.ValueRO.Duration || moving ||
 					action.ValueRO.Completed || action.ValueRO.Rejected) {
 					transition.ValueRW.Request<MmdSampleLocomotion>(MmdSampleStatePriority.Completion);
 				}

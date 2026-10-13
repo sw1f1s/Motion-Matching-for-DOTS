@@ -1,3 +1,5 @@
+using ColInt.MMD.Samples.Character.Movement.SlideState.Components;
+using ColInt.MMD.Samples.Character.Movement.Shared.Components;
 using ColInt.MMD.Actions.Components;
 using ColInt.MMD.Lifecycle.Components;
 using ColInt.MMD.Physics.Components;
@@ -34,6 +36,7 @@ namespace ColInt.MMD.Samples.Character.Movement.Facing.Systems {
 		}
 
 		[BurstCompile]
+		[WithNone(typeof(MmdSampleState<MmdSampleSlide>), typeof(MmdSampleState<MmdSampleSlideExit>))]
 		private partial struct FacingJob : IJobEntity {
 			public MmdSampleInput Input;
 			[ReadOnly] public ComponentLookup<MmdSampleCharacterInputOverride> CharacterInputs;

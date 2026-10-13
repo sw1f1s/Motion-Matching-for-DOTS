@@ -51,7 +51,7 @@ namespace ColInt.MMD.Samples.Character.Movement.TraversalState.Systems {
 				ref PhysicsVelocity velocity, ref MmdRootMotion motion, ref MmdInertializationState smoothing) {
 				bool continueMoving = target.Supported && math.dot(Input.Movement, math.forward(target.Rotation).xz) > 0.5f;
 				float3 position = MmdSampleTraversalPath.Position(ref data.Value.Value, target, progress.Clip, playback.Time, continueMoving);
-				quaternion rotation = MmdSampleTraversalPath.Rotation(target, playback.Time - progress.Clip.StartTime, settings.AlignmentDuration);
+				quaternion rotation = MmdSampleTraversalPath.Rotation(target, progress.Clip, playback.Time, settings.AlignmentDuration);
 				if (!MmdSampleTraversalQuery.TargetExists(World, target) ||
 					!MmdSampleTraversalQuery.ClearSegment(World, entity, collider,
 						transform.Position, position, rotation, transform.Scale)) {

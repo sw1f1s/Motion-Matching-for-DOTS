@@ -1,4 +1,5 @@
 using Unity.Entities;
+using Unity.Mathematics;
 
 namespace ColInt.MMD.Samples.Character.Movement.TraversalState.Components {
 	[InternalBufferCapacity(0)]
@@ -6,6 +7,8 @@ namespace ColInt.MMD.Samples.Character.Movement.TraversalState.Components {
 		public int ClipIndex;
 		public int ActionId;
 		public float StartTime;
+		public float ContactTime;
+		public float3 ContactPosition;
 		public float RootHeight;
 		public float ClearanceTime;
 		public float LiftTime;

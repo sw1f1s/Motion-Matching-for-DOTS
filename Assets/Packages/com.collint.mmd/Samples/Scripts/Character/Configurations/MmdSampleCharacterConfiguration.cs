@@ -10,6 +10,7 @@ namespace ColInt.MMD.Samples.Character.Configurations {
 		[SerializeField] private MmdSampleFallConfiguration _fall = new MmdSampleFallConfiguration();
 		[SerializeField] private MmdSampleLandingConfiguration _landing = new MmdSampleLandingConfiguration();
 		[SerializeField] private MmdSampleCrouchConfiguration _crouch = new MmdSampleCrouchConfiguration();
+		[SerializeField] private MmdSampleSlideConfiguration _slide = new MmdSampleSlideConfiguration();
 		[SerializeField] private MmdSampleTraversalConfiguration _traversal = new MmdSampleTraversalConfiguration();
 
 		public MmdSampleCharacterAssets Assets => _assets;
@@ -19,6 +20,7 @@ namespace ColInt.MMD.Samples.Character.Configurations {
 		public MmdSampleFallConfiguration Fall => _fall;
 		public MmdSampleLandingConfiguration Landing => _landing;
 		public MmdSampleCrouchConfiguration Crouch => _crouch;
+		public MmdSampleSlideConfiguration Slide => _slide;
 		public MmdSampleTraversalConfiguration Traversal => _traversal;
 	}
 }

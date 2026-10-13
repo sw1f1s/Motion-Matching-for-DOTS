@@ -10,8 +10,10 @@ using ColInt.MMD.Samples.Character.Movement.LandingState.Components;
 using ColInt.MMD.Samples.Character.Movement.LocomotionState.Components;
 using ColInt.MMD.Samples.Character.Movement.Shared.Components;
 using ColInt.MMD.Samples.Character.Movement.TraversalState.Helpers;
+using ColInt.MMD.Samples.Character.Movement.SlideState.Helpers;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Mathematics;
 
 namespace ColInt.MMD.Samples.Character.Movement.Shared.Helpers {
 	public static class MmdSampleMovementFactory {
@@ -25,7 +27,7 @@ namespace ColInt.MMD.Samples.Character.Movement.Shared.Helpers {
 				MaximumFallSpeed = configuration.Fall.MaximumSpeed, GroundContactDistance = configuration.Fall.GroundContactDistance,
 				FallEntrySpeed = configuration.Fall.EntrySpeed, HeavyLandingHeight = configuration.Landing.HeavyHeight,
 				LightRecoveryTime = configuration.Landing.LightRecoveryTime, HeavyRecoveryTime = configuration.Landing.HeavyRecoveryTime,
-				WalkSpeed = configuration.Locomotion.WalkSpeed, RunSpeed = configuration.Locomotion.RunSpeed, Ground = MmdGroundMovement.Default
+				WalkSpeed = configuration.Locomotion.WalkSpeed, RunSpeed = configuration.Locomotion.RunSpeed, SprintSpeed = configuration.Locomotion.SprintSpeed, Ground = MmdGroundMovement.Default
 			};
 			if (settings.JumpHeight <= 0f || settings.TakeoffTime < 0f || settings.AirAcceleration < 0f || settings.MaximumFallSpeed <= 0f ||
 				settings.GroundContactDistance <= 0f || settings.FallEntrySpeed <= 0f || settings.HeavyLandingHeight <= 0f ||
@@ -47,27 +49,45 @@ namespace ColInt.MMD.Samples.Character.Movement.Shared.Helpers {
 				WalkHeavyAction = Action(ref database.Value, configuration.Landing.HeavyGroups.Walk), RunHeavyAction = Action(ref database.Value, configuration.Landing.HeavyGroups.Run)
 			});
 			if (!string.IsNullOrEmpty(configuration.Crouch.IdleGroup)) {
-				if (configuration.Crouch.Speed <= 0f || configuration.Crouch.TransitionDuration <= 0f) {
-					throw new ArgumentException("Sample crouch needs positive speed and transition duration.");
+				if (!math.isfinite(configuration.Crouch.AnimationSpeed) || configuration.Crouch.AnimationSpeed <= 0f ||
+					configuration.Crouch.Speed <= 0f || configuration.Crouch.TransitionDuration <= 0f) {
+					throw new ArgumentException("Sample crouch needs positive movement speed, animation speed and transition duration.");
 				}
 				manager.AddComponentData(entity, new MmdSampleCrouch {
-					Speed = configuration.Crouch.Speed, TransitionDuration = configuration.Crouch.TransitionDuration,
+					Speed = configuration.Crouch.Speed, AnimationSpeed = configuration.Crouch.AnimationSpeed, TransitionDuration = configuration.Crouch.TransitionDuration,
 					IdleTags = Matching(ref database.Value, configuration.Crouch.IdleGroup), MoveTags = Matching(ref database.Value, configuration.Crouch.MoveGroup),
 					TurnTags = Matching(ref database.Value, configuration.Crouch.TurnGroup), StartTags = Matching(ref database.Value, configuration.Crouch.StartGroup),
 					EnterAction = Action(ref database.Value, configuration.Crouch.EnterGroup), ExitAction = Action(ref database.Value, configuration.Crouch.ExitGroup)
 				});
 				manager.AddComponent<MmdSampleCrouchProgress>(entity);
 			}
+			MmdSampleSlideFactory.Add(manager, entity, configuration, database);
 			MmdSampleTraversalFactory.Add(manager, entity, configuration, database);
 			manager.AddComponent<MmdSampleJumpProgress>(entity);
 			manager.AddComponent<MmdSampleJumpIntent>(entity);
 			manager.AddComponent<MmdSampleLocomotion>(entity);
 			manager.AddComponentData(entity, settings);
 			manager.AddComponent<MmdSampleGroundState>(entity);
+			manager.AddComponentData(entity, new MmdSampleFootContact {
+				LeftToe = Toe(ref database.Value, database.Value.LeftFootBone), RightToe = Toe(ref database.Value, database.Value.RightFootBone)
+			});
 			manager.AddComponent<MmdSampleStateMachine>(entity);
 			var transition = new MmdSampleStateTransition();
 			transition.Request<MmdSampleLocomotion>(MmdSampleStatePriority.Completion);
 			manager.AddComponentData(entity, transition);
+		}
+
+		private static int Toe(ref MotionDatabase database, int foot) {
+			if (foot < 0 || foot >= database.Parents.Length || database.Parents[foot] < 0 || database.Parents[database.Parents[foot]] < 0) {
+				throw new ArgumentException("Sample foot contact requires a thigh/calf/foot chain.");
+			}
+			for (int bone = 0; bone < database.Parents.Length; bone++) {
+				if (database.Parents[bone] == foot) {
+					return bone;
+				}
+			}
+			// Toe bones are optional; a rig without toes still constrains its ankles.
+			return foot;
 		}
 
 		private static uint Matching(ref MotionDatabase database, string name) {

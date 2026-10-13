@@ -114,6 +114,38 @@ namespace ColInt.MMD.Tests {
 			Assert.That(_sample.World.EntityManager.HasComponent<MmdSampleState<MmdSampleLocomotion>>(_character), Is.True);
 		}
 
+		[TestCase(1f, 0f, 0f)]
+		[TestCase(6f, 0f, 0.85f)]
+		[TestCase(1f, 2f, -1.5f)]
+		public void LandingAndIdleBlendKeepFeetAboveTheirActualSupport(float fallHeight, float surface, float yaw) {
+			// Landing also works without Traversal, on an elevated support and with a rotated character.
+			_configuration.Traversal.Groups.Mantle = string.Empty;
+			if (surface > 0f) {
+				AddBox(new float3(0f, surface * 0.5f, 0f), new float3(10f, surface, 10f));
+			}
+			_character = _sample.Characters.Create(_configuration,
+				LocalTransform.FromPositionRotation(new float3(0f, surface + fallHeight, 0f), quaternion.RotateY(yaw)), true, false);
+			var manager = _sample.World.EntityManager;
+			bool landed = false;
+			int idleTicks = 0;
+			for (int tick = 0; tick < 300; tick++) {
+				_sample.Tick();
+				landed |= manager.HasComponent<MmdSampleState<MmdSampleLanding>>(_character);
+				if (!landed) {
+					continue;
+				}
+				AssertFeetAbove(surface);
+				var transform = manager.GetComponentData<LocalTransform>(_character);
+				Assert.That(math.length(transform.Position.xz), Is.LessThan(0.01f), "Pose support must not displace the entity horizontally.");
+				Assert.That(transform.Position.y, Is.InRange(surface - 0.03f, surface + 0.08f), "Pose support must not lift the physical root.");
+				if (manager.HasComponent<MmdSampleState<MmdSampleLocomotion>>(_character) && ++idleTicks >= 45) {
+					break;
+				}
+			}
+			Assert.That(landed, Is.True);
+			Assert.That(idleTicks, Is.EqualTo(45));
+		}
+
 		[Test]
 		public void RunningOffPlatformFallsAndResumesLocomotionOnLowerFloor() {
 			AddBox(new float3(0f, 1.75f, 0f), new float3(4f, 3.5f, 4f));
@@ -252,6 +284,36 @@ namespace ColInt.MMD.Tests {
 			Assert.That(manager.GetComponentData<PhysicsVelocity>(_character).Linear.y, Is.GreaterThan(3f));
 		}
 
+		[TestCase(0f)]
+		[TestCase(0.85f)]
+		[TestCase(-1.5f)]
+		public void VerticalJumpKeepsItsPlanarPositionDuringFall(float yaw) {
+			_character = _sample.Characters.Create(_configuration, LocalTransform.FromRotation(quaternion.RotateY(yaw)), true, false);
+			Advance(60);
+			var manager = _sample.World.EntityManager;
+			float2 start = manager.GetComponentData<LocalTransform>(_character).Position.xz;
+			_sample.SetInput(new MmdSampleInput { JumpPressed = true });
+			float2 firstFallPose = float2.zero;
+			bool fell = false;
+			for (int tick = 0; tick < 100; tick++) {
+				_sample.Tick();
+				var transform = manager.GetComponentData<LocalTransform>(_character);
+				if (manager.HasComponent<MmdSampleState<MmdSampleFall>>(_character)) {
+					var smoothing = manager.GetComponentData<MmdInertializationState>(_character);
+					float2 pose = manager.GetBuffer<MmdLocalPose>(_character)[0].Value.Position.xz;
+					if (!fell) {
+						firstFallPose = pose;
+					}
+					fell = true;
+					Assert.That(smoothing.StationaryPoseOffset, Is.EqualTo(float3.zero), "Airborne feet must not anchor a Fall loop as if it were grounded Idle.");
+					Assert.That(smoothing.PoseDuration, Is.EqualTo(_configuration.Transitions.PoseDuration));
+					Assert.That(math.distance(firstFallPose, pose), Is.LessThan(0.15f), "The Fall transition must not slide the whole skeleton backwards by the outgoing jump's foot offset.");
+				}
+				Assert.That(math.distance(transform.Position.xz, start), Is.LessThan(0.005f), "A vertical jump must not acquire horizontal movement from the Fall clip.");
+			}
+			Assert.That(fell, Is.True);
+		}
+
 		private void AssertLandingPose() {
 			var manager = _sample.World.EntityManager;
 			if (!manager.HasComponent<MmdSampleState<MmdSampleLanding>>(_character)) {
@@ -269,6 +331,29 @@ namespace ColInt.MMD.Tests {
 			float feet = math.min(models[database.Value.LeftFootBone].c3.y, models[database.Value.RightFootBone].c3.y);
 			Assert.That(feet, Is.InRange(-0.3f, 0.8f), "The landing pose must remain near the grounded entity instead of replaying the source fall height.");
 			Assert.That(manager.GetComponentData<PhysicsVelocity>(_character).Linear.y, Is.LessThan(0.5f), "Landing must not introduce another upward impulse.");
+			var ground = manager.GetComponentData<MmdSampleGroundState>(_character);
+			if (ground.IsGrounded) {
+				AssertFeetAbove(ground.SupportHeight - manager.GetComponentData<MmdSampleMovementSettings>(_character).Ground.Skin);
+			}
+		}
+
+		private void AssertFeetAbove(float surface) {
+			var manager = _sample.World.EntityManager;
+			var database = manager.GetComponentData<MmdDatabase>(_character).Value;
+			var transform = manager.GetComponentData<LocalTransform>(_character);
+			var poses = manager.GetBuffer<MmdLocalPose>(_character);
+			var models = new float4x4[poses.Length];
+			for (int bone = 0; bone < poses.Length; bone++) {
+				var pose = poses[bone].Value;
+				var local = float4x4.TRS(pose.Position, pose.Rotation, pose.Scale);
+				int parent = database.Value.Parents[bone];
+				models[bone] = parent < 0 ? local : math.mul(models[parent], local);
+				if (bone == database.Value.LeftFootBone || bone == database.Value.RightFootBone ||
+					parent == database.Value.LeftFootBone || parent == database.Value.RightFootBone) {
+					float height = transform.Position.y + math.rotate(transform.Rotation, models[bone].c3.xyz * transform.Scale).y;
+					Assert.That(height, Is.GreaterThanOrEqualTo(surface - 0.005f), "Displayed ankle/toe penetrates the landing support: bone " + bone);
+				}
+			}
 		}
 
 		private void CreateCharacter(float3 position) {

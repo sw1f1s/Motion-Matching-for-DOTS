@@ -6,6 +6,7 @@ namespace ColInt.MMD.Samples.Character.Movement.CrouchState.Components {
 	public struct MmdSampleCrouchProgress : IComponentData {
 		public MmdSampleCharacterControl StandingControl;
 		public MmdInertialization StandingInertialization;
+		public float StandingDirectionWeight;
 		public float Duration;
 	}
 }

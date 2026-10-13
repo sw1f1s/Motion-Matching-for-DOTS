@@ -76,6 +76,7 @@ namespace ColInt.MMD.Samples.Lifecycle {
 			if (paused) {
 				var input = World.EntityManager.GetComponentData<MmdSampleInput>(_stateEntity);
 				input.JumpPressed = false;
+				input.CrouchPressed = false;
 				World.EntityManager.SetComponentData(_stateEntity, input);
 			}
 		}

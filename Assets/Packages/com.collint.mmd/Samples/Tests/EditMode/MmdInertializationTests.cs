@@ -1,6 +1,7 @@
 using ColInt.MMD.Actions.Components;
 using ColInt.MMD.Database.Components;
 using ColInt.MMD.Database.Helpers;
+using ColInt.MMD.Database.Data;
 using ColInt.MMD.Playback.Components;
 using ColInt.MMD.Playback.Helpers;
 using ColInt.MMD.RootMotion.Components;
@@ -45,9 +46,59 @@ namespace ColInt.MMD.Tests {
 			}
 		}
 
-		[TestCase(0.2f)]
-		[TestCase(0f)]
-		public void SettledStopPreservesFootprintInIdleWithoutMovingEntityAndReleasesAlignmentOnMovement(float duration) {
+		[TestCase(-1f, false)]
+		[TestCase(1f, false)]
+		[TestCase(-1f, true)]
+		[TestCase(1f, true)]
+		public void HipTurnsPreserveTheKneeHingeThroughInterruptedTransitions(float direction, bool interrupt) {
+			var source = MotionDatabaseFixture.Create();
+			source.Parents = new[] { -1, 0, 1, 2 };
+			source.BoneNameHashes = new[] { 1, 2, 3, 4 };
+			source.Poses = new JointPose[source.Frames.Length * 4];
+			for (int frame = 0; frame < source.Frames.Length; frame++) {
+				bool turning = source.Frames[frame].ClipIndex == 1;
+				for (int bone = 0; bone < 4; bone++) {
+					source.Poses[frame * 4 + bone] = new JointPose {
+						Position = new float3(0f, bone == 0 ? 0f : 0.4f, 0f), Rotation = quaternion.identity, Scale = new float3(1f)
+					};
+				}
+				var thigh = source.Poses[frame * 4 + 2];
+				thigh.Rotation = quaternion.RotateY(turning ? direction * 2f : 0f);
+				source.Poses[frame * 4 + 2] = thigh;
+				var knee = source.Poses[frame * 4 + 3];
+				knee.Rotation = quaternion.RotateZ(turning ? 1.6f : 0.4f);
+				source.Poses[frame * 4 + 3] = knee;
+			}
+			using (var sample = new MmdSampleWorld(1f / 60f)) {
+				var manager = sample.World.EntityManager;
+				Entity actor = sample.Characters.Create(MotionDatabaseBuilder.Build(source), false, LocalTransform.Identity);
+				manager.AddComponentData(actor, new MmdInertialization { PoseDuration = 0.2f });
+				manager.AddComponent<MmdInertializationState>(actor);
+				manager.AddBuffer<MmdInertialPose>(actor);
+				manager.SetComponentData(actor, new MmdPlayback { Speed = 1f, SearchCountdown = 100f });
+				for (int tick = 0; tick < 6; tick++) {
+					sample.Tick();
+				}
+				Switch(manager, actor, 1);
+				for (int tick = 0; tick < 30; tick++) {
+					if (interrupt && tick == 4) {
+						Switch(manager, actor, 0);
+					}
+					sample.Tick();
+					var knee = manager.GetBuffer<MmdLocalPose>(actor)[3].Value.Rotation;
+					float3 bend = MmdAnimationMath.RotationVector(knee);
+					Assert.That(math.length(bend.xy), Is.LessThan(0.0001f), "A parent turn must not add sideways rotation to a hinge joint.");
+				}
+				var expected = quaternion.RotateZ(interrupt ? 0.4f : 1.6f);
+				Assert.That(MmdRotationPacking.ErrorDegrees(manager.GetBuffer<MmdLocalPose>(actor)[3].Value.Rotation, expected), Is.LessThan(0.01f));
+			}
+		}
+
+		[TestCase(0.2f, 2u)]
+		[TestCase(0f, 2u)]
+		[TestCase(0.2f, 0u)]
+		[TestCase(0.2f, 1u)]
+		public void SettledStopPreservesFootprintOnlyForConfiguredGroupsAndReleasesAlignmentOnMovement(float duration, uint stationaryTags) {
 			var source = MotionDatabaseFixture.Create();
 			var stop = source.Clips[0];
 			stop.Loop = false;
@@ -66,7 +117,7 @@ namespace ColInt.MMD.Tests {
 			using (var sample = new MmdSampleWorld(1f / 60f)) {
 				var manager = sample.World.EntityManager;
 				Entity actor = sample.Characters.Create(MotionDatabaseBuilder.Build(source), true, LocalTransform.Identity);
-				manager.AddComponentData(actor, new MmdInertialization { PoseDuration = duration, RootDuration = 0.1f });
+				manager.AddComponentData(actor, new MmdInertialization { PoseDuration = duration, RootDuration = 0.1f, StationaryPoseTags = stationaryTags });
 				manager.AddComponent<MmdInertializationState>(actor);
 				manager.AddBuffer<MmdInertialPose>(actor);
 				manager.SetComponentData(actor, new MmdPlayback { Speed = 1f, SearchCountdown = 100f });
@@ -77,7 +128,7 @@ namespace ColInt.MMD.Tests {
 				for (int tick = 0; tick < 30; tick++) {
 					sample.Tick();
 				}
-				float expected = duration > 0f ? 0.07f : 0f;
+				float expected = duration > 0f && (stationaryTags & source.Clips[1].Tags) != 0 ? 0.07f : 0f;
 				Assert.That(manager.GetBuffer<MmdLocalPose>(actor)[0].Value.Position.x, Is.EqualTo(expected).Within(0.00001f));
 				Assert.That(manager.GetComponentData<MmdInertializationState>(actor).StationaryPoseOffset.x, Is.EqualTo(expected).Within(0.00001f));
 				Assert.That(manager.GetComponentData<LocalTransform>(actor).Position, Is.EqualTo(float3.zero));
@@ -112,7 +163,7 @@ namespace ColInt.MMD.Tests {
 				var transform = LocalTransform.FromPositionRotation(new float3(2f, 0f, 3f), quaternion.RotateY(0.7f));
 				Entity actor = sample.Characters.Create(MotionDatabaseBuilder.Build(source), false, transform);
 				manager.AddComponentData(actor, new MmdInertialization {
-					PoseDuration = 0.2f, StationaryPoseDuration = stationaryDuration, RootDuration = 0.1f
+					PoseDuration = 0.2f, StationaryPoseDuration = stationaryDuration, RootDuration = 0.1f, StationaryPoseTags = source.Clips[1].Tags
 				});
 				manager.AddComponent<MmdInertializationState>(actor);
 				manager.AddBuffer<MmdInertialPose>(actor);
@@ -232,6 +283,21 @@ namespace ColInt.MMD.Tests {
 				Assert.That(manager.GetBuffer<MmdLocalPose>(character)[1].Value.Position.x, Is.EqualTo(3f));
 				Assert.That(manager.GetComponentData<MmdRootMotion>(character).Translation.z, Is.EqualTo(sample.Timestep).Within(0.00001f));
 			}
+		}
+
+		[TestCase(-20f)]
+		[TestCase(20f)]
+		public void RotationCorrectionSettlesWithoutOvershootingOrAddingAnotherAxis(float speed) {
+			float3 offset = new float3(0f, 0f, 0.4f);
+			float3 velocity = new float3(12f, -15f, speed);
+			float previous = offset.z;
+			for (int tick = 0; tick <= 60; tick++) {
+				float3 correction = MmdAnimationMath.DecayRotation(offset, velocity, tick / 60f, 0.2f);
+				Assert.That(math.length(correction.xy), Is.LessThan(0.000001f), "Decay must not invent a twist axis absent from the rotation correction.");
+				Assert.That(correction.z, Is.InRange(-0.000001f, previous + 0.000001f), "Angular velocity must not reverse or grow the correction.");
+				previous = correction.z;
+			}
+			Assert.That(previous, Is.Zero);
 		}
 
 		[Test]

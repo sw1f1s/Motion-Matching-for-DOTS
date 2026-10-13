@@ -14,6 +14,7 @@ namespace ColInt.MMD.Samples.Character.Movement.Shared.Components {
 		public float HeavyRecoveryTime;
 		public float WalkSpeed;
 		public float RunSpeed;
+		public float SprintSpeed;
 		public MmdGroundMovement Ground;
 	}
 }

@@ -1,3 +1,4 @@
+using ColInt.MMD.Samples.Character.Movement.LocomotionState.Helpers;
 using ColInt.MMD.Lifecycle.Components;
 using ColInt.MMD.Samples.Character.Components;
 using ColInt.MMD.Samples.Character.Input.Components;
@@ -59,7 +60,7 @@ namespace ColInt.MMD.Samples.Character.Movement.Shared.Systems {
 					float2 planar = movement.AirVelocity;
 					if (Controls.HasComponent(entity)) {
 						var input = CharacterInputs.HasComponent(entity) ? CharacterInputs[entity].Value : Input;
-						float speed = input.Run ? settings.RunSpeed : settings.WalkSpeed;
+						float speed = MmdSampleGait.Speed(settings, input);
 						float2 desired = input.Movement * speed;
 						float2 change = desired - planar;
 						planar += math.normalizesafe(change) * math.min(math.length(change), settings.AirAcceleration * DeltaTime);

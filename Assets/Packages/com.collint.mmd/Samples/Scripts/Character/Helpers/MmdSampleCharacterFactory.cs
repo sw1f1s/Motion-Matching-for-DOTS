@@ -49,16 +49,17 @@ namespace ColInt.MMD.Samples.Character.Helpers {
 				MmdSampleCharacterPhysicsBuilder.Add(manager, entity, string.IsNullOrEmpty(configuration.Crouch.IdleGroup) ? 0f : configuration.Crouch.Height);
 				if (database.IsCreated) {
 					manager.AddComponentData(entity, new MmdInertialization {
-						PoseDuration = configuration.Transitions.PoseDuration, StationaryPoseDuration = configuration.Transitions.IdlePoseDuration, RootDuration = configuration.Transitions.RootDuration
+						PoseDuration = configuration.Transitions.PoseDuration, StationaryPoseDuration = configuration.Transitions.IdlePoseDuration, RootDuration = configuration.Transitions.RootDuration,
+						StationaryPoseTags = ResolveTags(database, configuration.Locomotion.IdleGroup) | ResolveTags(database, configuration.Crouch.IdleGroup)
 					});
 					manager.AddComponent<MmdInertializationState>(entity);
 					manager.AddBuffer<MmdInertialPose>(entity);
 				}
 				if (playerControlled) {
 					manager.AddComponentData(entity, new MmdSampleCharacterControl {
-						WalkSpeed = configuration.Locomotion.WalkSpeed, RunSpeed = configuration.Locomotion.RunSpeed, TurnSpeed = configuration.Locomotion.TurnSpeed,
+						WalkSpeed = configuration.Locomotion.WalkSpeed, RunSpeed = configuration.Locomotion.RunSpeed, SprintSpeed = configuration.Locomotion.SprintSpeed, TurnSpeed = configuration.Locomotion.TurnSpeed,
 						IdleTags = ResolveTags(database, configuration.Locomotion.IdleGroup), WalkTags = ResolveTags(database, configuration.Locomotion.WalkGroup),
-						RunTags = ResolveTags(database, configuration.Locomotion.RunGroup), TurnTags = ResolveTags(database, configuration.Locomotion.TurnGroup),
+						RunTags = ResolveTags(database, configuration.Locomotion.RunGroup), SprintTags = ResolveTags(database, configuration.Locomotion.SprintGroup), TurnTags = ResolveTags(database, configuration.Locomotion.TurnGroup),
 						StartTags = ResolveTags(database, configuration.Locomotion.StartGroup)
 					});
 				}

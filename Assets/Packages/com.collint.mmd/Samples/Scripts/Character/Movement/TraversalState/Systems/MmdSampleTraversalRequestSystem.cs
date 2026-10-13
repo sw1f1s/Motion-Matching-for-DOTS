@@ -1,3 +1,4 @@
+using ColInt.MMD.Samples.Character.Movement.LocomotionState.Helpers;
 using ColInt.MMD.Database.Components;
 using ColInt.MMD.Lifecycle.Components;
 using ColInt.MMD.MotionMatching.Components;
@@ -66,13 +67,13 @@ namespace ColInt.MMD.Samples.Character.Movement.TraversalState.Systems {
 				if (!MmdSampleTraversalQuery.Probe(World, entity, transform, facing, probeSettings, airborne, out var target)) {
 					return;
 				}
-				float speed = math.max(math.length(velocity.Linear.xz), math.length(Input.Movement) * (Input.Run ? control.RunSpeed : control.WalkSpeed));
+				float speed = math.max(math.length(velocity.Linear.xz), math.length(Input.Movement) * (MmdSampleGait.Speed(control, Input)));
 				if (!airborne && math.dot(target.Front - target.Start, math.forward(target.Rotation)) < 0.08f) {
 					speed = math.length(velocity.Linear.xz);
 				}
 				int action;
 				if (airborne) {
-					action = target.Across ? (Input.Run ? catchHurdle.ActionId : catchVault.ActionId) :
+					action = target.Across ? ((Input.Run || Input.Sprint) ? catchHurdle.ActionId : catchVault.ActionId) :
 						target.Height > 1.1f ? catchCliff.ActionId : catchMantle.ActionId;
 				} else {
 					action = target.Across ? (speed > control.WalkSpeed * 0.5f ? hurdle.ActionId : vault.ActionId) :
@@ -83,7 +84,7 @@ namespace ColInt.MMD.Samples.Character.Movement.TraversalState.Systems {
 				MmdSampleTraversalQuery.ExtendLanding(World, entity, ref target, speed);
 				if (!target.Supported) {
 					float3 forward = math.forward(target.Rotation);
-					target.ExitVelocity = forward * math.min(control.RunSpeed, selected.ExitSpeed);
+					target.ExitVelocity = forward * math.min(MmdSampleGait.Speed(control, Input), selected.ExitSpeed);
 					target.ExitVelocity.y = -math.sqrt(2f * Gravity * math.max(0f, target.AboveEnd.y - target.End.y));
 					target.End += forward * (math.length(target.ExitVelocity.xz) * (selected.Duration - selected.TransferTime) * 0.5f);
 				}
@@ -98,7 +99,7 @@ namespace ColInt.MMD.Samples.Character.Movement.TraversalState.Systems {
 				progress.Clip = selected;
 				if (airborne) {
 					if (target.Across) {
-						if (Input.Run) {
+						if (Input.Run || Input.Sprint) {
 							transition.Request<MmdSampleCatchHurdle>(MmdSampleStatePriority.Traversal);
 						} else {
 							transition.Request<MmdSampleCatchVault>(MmdSampleStatePriority.Traversal);

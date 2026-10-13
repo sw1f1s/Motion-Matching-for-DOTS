@@ -11,6 +11,9 @@ namespace ColInt.MMD.Samples.Character.Configurations {
 		public float RunSpeed { get; set; } = 4f;
 
 		[field: SerializeField, Min(0f)]
+		public float SprintSpeed { get; set; } = 7f;
+
+		[field: SerializeField, Min(0f)]
 		public float TurnSpeed { get; set; } = 1.5f;
 
 		[field: SerializeField]
@@ -21,6 +24,9 @@ namespace ColInt.MMD.Samples.Character.Configurations {
 
 		[field: SerializeField]
 		public string RunGroup { get; set; } = string.Empty;
+
+		[field: SerializeField]
+		public string SprintGroup { get; set; } = string.Empty;
 
 		[field: SerializeField]
 		public string TurnGroup { get; set; } = string.Empty;

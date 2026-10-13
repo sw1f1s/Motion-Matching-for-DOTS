@@ -53,6 +53,31 @@ namespace ColInt.MMD.Samples.Character.Movement.TraversalState.Helpers {
 			};
 		}
 
+		public static MmdSampleTraversalClip Contacts(ref MotionDatabase database, MmdSampleTraversalClip profile, int leftHand, int rightHand) {
+			ref var clip = ref database.Clips[profile.ClipIndex];
+			int window = math.max(1, (int)(clip.SampleRate * 0.05f));
+			for (int sample = window; sample < clip.FrameCount - window; sample++) {
+				int frame = clip.FirstFrame + sample;
+				ref var motion = ref database.Frames[frame];
+				if (motion.Root.pos.y < profile.RootHeight * 0.15f || motion.Root.pos.y > profile.RootHeight * 0.75f) {
+					continue;
+				}
+				float3 contact = HandCenter(ref database, frame, leftHand, rightHand);
+				if (math.abs(contact.y - profile.RootHeight) > 0.15f) {
+					continue;
+				}
+				float3 before = HandCenter(ref database, frame - window, leftHand, rightHand);
+				float3 after = HandCenter(ref database, frame + window, leftHand, rightHand);
+				float span = database.Frames[frame + window].Time - database.Frames[frame - window].Time;
+				if (math.distance(before, after) / span <= 0.6f) {
+					profile.ContactTime = motion.Time;
+					profile.ContactPosition = contact;
+					break;
+				}
+			}
+			return profile;
+		}
+
 		public static MmdSampleTraversalClip Fit(ref MotionDatabase database, MmdSampleTraversalClip profile,
 			in MmdSampleTraversalTarget target, bool airborne) {
 			float distance = math.max(0f, math.dot(target.Front - target.Start, math.forward(target.Rotation)));
@@ -144,6 +169,19 @@ namespace ColInt.MMD.Samples.Character.Movement.TraversalState.Helpers {
 			massOverride = progress.PreviousMassOverride;
 			gravity = progress.PreviousGravity;
 			smoothing = progress.PreviousSmoothing;
+		}
+
+		private static float3 HandCenter(ref MotionDatabase database, int frame, int left, int right) {
+			return math.transform(database.Frames[frame].Root, (BonePosition(ref database, frame, left) + BonePosition(ref database, frame, right)) * 0.5f);
+		}
+
+		private static float3 BonePosition(ref MotionDatabase database, int frame, int bone) {
+			float3 position = float3.zero;
+			for (int current = bone; current >= 0; current = database.Parents[current]) {
+				var pose = MmdAnimationMath.PoseSample(ref database, frame, current);
+				position = pose.Position + math.rotate(pose.Rotation, position * pose.Scale);
+			}
+			return position;
 		}
 	}
 }

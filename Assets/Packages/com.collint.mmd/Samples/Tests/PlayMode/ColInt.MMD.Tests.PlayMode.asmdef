@@ -12,7 +12,8 @@
     "Unity.Entities.Graphics",
     "Unity.Scenes",
     "Unity.Transforms",
-    "Unity.Physics"
+    "Unity.Physics",
+    "Unity.InputSystem"
   ],
   "autoReferenced": false,
   "optionalUnityReferences": [

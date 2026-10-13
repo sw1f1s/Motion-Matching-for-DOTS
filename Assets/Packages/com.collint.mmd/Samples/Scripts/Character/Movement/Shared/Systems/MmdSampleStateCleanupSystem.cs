@@ -23,7 +23,9 @@ namespace ColInt.MMD.Samples.Character.Movement.Shared.Systems {
 				commands.RemoveComponent<MmdSampleStateEntering>(entity);
 			}
 			commands.Playback(state.EntityManager);
-			SystemAPI.GetSingletonRW<MmdSampleInput>().ValueRW.JumpPressed = false;
+			var input = SystemAPI.GetSingletonRW<MmdSampleInput>();
+			input.ValueRW.JumpPressed = false;
+			input.ValueRW.CrouchPressed = false;
 		}
 	}
 }

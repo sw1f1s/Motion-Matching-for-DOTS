@@ -1,0 +1,31 @@
+{
+  "name": "com.collint.mmd.samples",
+  "displayName": "Motion Matching for DOTS \u2014 Samples",
+  "version": "0.2.0",
+  "unity": "6000.3",
+  "description": "Optional MMD integration examples, character gameplay, scenes, animation assets, benchmarks and tests.",
+  "dependencies": {
+    "com.collint.mmd": "0.2.0",
+    "com.unity.inputsystem": "1.19.0",
+    "com.unity.modules.terrainphysics": "1.0.0",
+    "com.unity.modules.animation": "1.0.0"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Vladimir Litvinov",
+    "url": "https://github.com/sw1f1s"
+  },
+  "keywords": [
+    "dots",
+    "motion matching",
+    "samples",
+    "benchmark"
+  ],
+  "documentationUrl": "https://github.com/sw1f1s/Motion-Matching-for-DOTS/blob/main/Assets/Packages/com.collint.mmd.samples/README.md",
+  "licensesUrl": "https://github.com/sw1f1s/Motion-Matching-for-DOTS/blob/main/Assets/Packages/com.collint.mmd.samples/Third%20Party%20Notices.md",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sw1f1s/Motion-Matching-for-DOTS.git",
+    "directory": "Assets/Packages/com.collint.mmd.samples"
+  }
+}

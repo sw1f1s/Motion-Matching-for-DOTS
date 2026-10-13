@@ -1,7 +1,7 @@
 {
   "name": "com.collint.mmd",
   "displayName": "Motion Matching for DOTS",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "unity": "6000.3",
   "description": "Explicit-world ECS motion matching, sampled animation and authoritative root motion.",
   "dependencies": {
@@ -12,9 +12,7 @@
     "com.unity.collections": "2.6.6",
     "com.unity.burst": "1.8.29",
     "com.unity.nuget.newtonsoft-json": "3.2.2",
-    "com.unity.render-pipelines.universal": "17.3.0",
-    "com.unity.inputsystem": "1.19.0",
-    "com.unity.modules.terrainphysics": "1.0.0"
+    "com.unity.render-pipelines.universal": "17.3.0"
   },
   "license": "MIT",
   "author": {

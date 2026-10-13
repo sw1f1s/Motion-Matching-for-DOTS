@@ -52,7 +52,7 @@ public float DrawDistance => _drawDistance;
 
 ## Tests
 
-- Тесты хранить в `Assets/Packages/com.collint.mmd/Samples/Tests`, разделяя по режиму (`EditMode`/`PlayMode`), подсистемам и фичам. Вспомогательные классы размещать рядом с соответствующими тестами, тестовые assets — в их папке `Fixtures`.
+- Тесты хранить в `Assets/Packages/com.collint.mmd.samples/Tests`, разделяя по режиму (`EditMode`/`PlayMode`), подсистемам и фичам. Вспомогательные классы размещать рядом с соответствующими тестами, тестовые assets — в их папке `Fixtures`.
 
 - Для UI-кода автоматические тесты не писать; UI проверять только вручную в Unity.
 - Для interface dependencies в unit/service tests предпочитать `NSubstitute` вместо ручных fake/mock-классов; необходимая библиотека относится только к тестовым assembly, а не Runtime.

@@ -4,22 +4,39 @@ MMD (`com.collint.mmd`, namespace `ColInt.MMD`) — пакет скелетно�
 
 ## Установка
 
-Требуются Unity 6000.3+, URP, Git и Git LFS. В Package Manager выберите **Install package from Git URL**:
+Требуются Unity 6000.3+ и URP. Начиная с версии 0.2.0 ядро и примеры поставляются двумя UPM-пакетами:
+
+| Что установить | Пакет / архив |
+| --- | --- |
+| Только MMD | `com.collint.mmd` / `com.collint.mmd-0.2.0.tgz` |
+| Добавить примеры к установленному MMD | `com.collint.mmd.samples` / `com.collint.mmd.samples-0.2.0.tgz` |
+| MMD и примеры одним скачиванием | `mmd-with-samples-0.2.0.zip`, содержащий оба `.tgz` |
+
+Архивы создаются локально командой `python3 Tools/package_release.py` в `artifacts/packages`. Для одного пакета используйте `--package core` или `--package samples`. Папка `artifacts` исключена из Git; скрипт ничего не публикует. Samples требует ядро соответствующей версии и не работает самостоятельно.
+
+В Package Manager выберите **Install package from tarball** и укажите `.tgz`. Для общего комплекта сначала распакуйте ZIP, затем установите архив ядра и архив Samples. Сохраняйте `.tgz` по выбранным путям: проект ссылается на них в `Packages/manifest.json`. Архив ядра не содержит бинарных ресурсов примеров; для установки архивов Git LFS не нужен.
+
+После публикации этих изменений в основную ветку можно также установить пакеты через **Install package from Git URL**. Сначала ядро:
 
 ```text
-https://github.com/sw1f1s/Motion-Matching-for-DOTS.git?path=Assets/Packages/com.collint.mmd#v0.1.0
+https://github.com/sw1f1s/Motion-Matching-for-DOTS.git?path=Assets/Packages/com.collint.mmd#main
 ```
 
-Для версии из основной ветки замените `#v0.1.0` на `#main`. Зависимости объявлены в `package.json`; примеры и тесты входят в пакет.
+Затем, по необходимости, Samples:
 
-## Состав пакета
+```text
+https://github.com/sw1f1s/Motion-Matching-for-DOTS.git?path=Assets/Packages/com.collint.mmd.samples#main
+```
 
-- `Runtime` — поиск анимаций, playback, root motion, Physics и Graphics.
-- `Editor` — запекание баз и Debugger.
-- `Samples` — примеры интеграции, сцена персонажа, benchmark, ресурсы и тесты.
+UPM не поддерживает Git URL в зависимостях `package.json`, поэтому при установке из Git или архивов ядро нужно добавить первым. Оба Git URL используют один репозиторий; Git может скачивать его содержимое целиком. Для скачивания только ядра используйте отдельный `.tgz`. При установке Samples из Git нужен Git LFS. Старый тег `v0.1.0` сохраняет прежний объединённый пакет.
 
-Исходники находятся в `Assets/Packages/com.collint.mmd`. Описание компонентов, подготовки анимаций и подключения к своему ECS-миру — в [README пакета](Assets/Packages/com.collint.mmd/README.md).
+## Состав
+
+- [Ядро](Assets/Packages/com.collint.mmd/README.md): `Runtime` — поиск анимаций, playback, root motion, Physics и Graphics; `Editor` — запекание баз и Debugger.
+- [Samples](Assets/Packages/com.collint.mmd.samples/README.md): управление персонажем, камера, игровые состояния, сцены, benchmark, анимации, модели и тесты.
+
+В проекте разработки обе единственные копии находятся в `Assets/Packages`. Unity компилирует их напрямую из Assets; не регистрируйте эти папки одновременно как локальные UPM-зависимости этого же проекта.
 
 ## Лицензия
 
-Код — [MIT](LICENSE). Условия сторонних анимаций и моделей указаны в [Third Party Notices](Assets/Packages/com.collint.mmd/Third%20Party%20Notices.md).
+Код — [MIT](LICENSE). Условия сторонних анимаций и моделей указаны в [Third Party Notices пакета Samples](Assets/Packages/com.collint.mmd.samples/Third%20Party%20Notices.md).

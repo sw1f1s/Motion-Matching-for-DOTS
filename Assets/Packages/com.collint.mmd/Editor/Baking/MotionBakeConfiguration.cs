@@ -13,7 +13,7 @@ namespace ColInt.MMD.Editor.Baking {
 		[SerializeField] private string _sourceRootMotionPath;
 		[SerializeField] private string _leftFootPath;
 		[SerializeField] private string _rightFootPath;
-		[SerializeField] private string _output = "Assets/Packages/com.collint.mmd/Samples/Databases/Locomotion.bytes";
+		[SerializeField] private string _output = "Assets/MmdDatabases/Locomotion.bytes";
 
 		public GameObject Rig => _rig;
 		public MotionBakeGroup[] Groups => _groups;

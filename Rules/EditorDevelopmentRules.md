@@ -1,6 +1,6 @@
 # MMD Editor Development Rules
 
-Применяется к `Assets/Packages/com.collint.mmd/Editor`, `Samples/Editor` и настройке проекта в `Assets/Editor`.
+Применяется к `Assets/Packages/com.collint.mmd/Editor`, `Assets/Packages/com.collint.mmd.samples/Editor` и настройке проекта в `Assets/Editor`.
 
 - Editor tooling находится в Editor assembly; Runtime не зависит от UnityEditor, Editor или Sample Editor.
 - Основной Editor содержит baking и Debugger. Инструменты геометрии и игровой сцены находятся в Sample Editor. Не добавлять зависимости от конкретного проекта-потребителя.
@@ -9,7 +9,7 @@
 - Для больших сериализованных кешей использовать `Undo.RegisterCompleteObjectUndo`: diff byte-массивов через `Undo.RecordObject` расходует чрезмерную память.
 - Длительные операции используют Task, показывают прогресс, возвращают управление main thread и поддерживают отмену при смене/закрытии сцены, входе в Play Mode, reload и уничтожении владельца.
 - Отмена или ошибка сохраняет предыдущую рабочую базу/кеш. Заменять результат после успешной сборки, валидации и проверки неизменности источника.
-- Пользовательские результаты сохранять в Assets; в проекте разработки можно писать прямо в `Assets/Packages/com.collint.mmd/Samples`. Установленный Git/registry-пакет не изменять. Временные bake-ассеты имеют отдельную папку и явный cleanup.
+- Пользовательские результаты сохранять в Assets; в проекте разработки можно писать прямо в `Assets/Packages/com.collint.mmd.samples`. Установленный Git/registry-пакет не изменять. Временные bake-ассеты имеют отдельную папку и явный cleanup.
 - Сохранять GUID, обновлять asset paths после перемещений и проверять сцены, префабы, конфигурации, метаданные Debugger и тесты.
 - Отписываться от EditorApplication, UI callbacks и runtime events. Историю телеметрии ограничивать; не перестраивать большие списки каждый editor frame.
 - Debugger открывается через Window → Motion Matching for DOTS → Debugger. Список карточек сущностей показывает клип, группу, прогресс; детали раскрываются внутри карточки, история ограничена пятью клипами. Сохранять переход к сущности в Entities Hierarchy.

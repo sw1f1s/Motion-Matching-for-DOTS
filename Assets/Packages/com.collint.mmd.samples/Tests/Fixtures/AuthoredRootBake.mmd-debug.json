@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Fingerprint": "9e960a251133c7e8ae7a516360d0d22059c05d5367f821d2b23c70e3de9f1dfc",
+  "DatabasePath": "Assets/Packages/com.collint.mmd.samples/Tests/Fixtures/AuthoredRootBake.bytes",
+  "Names": [
+    "M_Neutral_Run_Loop_F"
+  ],
+  "AssetPaths": [
+    "Assets/Packages/com.collint.mmd.samples/Animations/Run/M_Neutral_Run_Loop_F.fbx"
+  ]
+}

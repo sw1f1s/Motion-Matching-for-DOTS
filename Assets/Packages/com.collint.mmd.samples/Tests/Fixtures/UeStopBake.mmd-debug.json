@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Fingerprint": "e45485c08d8a3e0db9e6f2c3c9090356178bd297278dab533fdcbf322fe53665",
+  "DatabasePath": "Assets/Packages/com.collint.mmd.samples/Tests/Fixtures/UeStopBake.bytes",
+  "Names": [
+    "M_Neutral_Run_Stop_F_Lfoot"
+  ],
+  "AssetPaths": [
+    "Assets/Packages/com.collint.mmd.samples/Animations/Run/M_Neutral_Run_Stop_F_Lfoot.fbx"
+  ]
+}

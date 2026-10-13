@@ -4,20 +4,21 @@ MMD — плагин анимации для Unity Entities: Motion Matching, в
 
 ## Установка
 
-Unity 6000.3+ и URP. Для бинарных Sample-ресурсов нужен установленный Git LFS. В Package Manager выберите **Install package from Git URL**:
+Unity 6000.3+ и URP. Этот пакет содержит только `Runtime` и `Editor`; сцены, управление персонажем, анимации и тесты поставляются отдельно в `com.collint.mmd.samples`.
+
+Для установки только ядра в Package Manager выберите **Install package from tarball** и укажите `com.collint.mmd-0.2.0.tgz`. Git LFS для архива не нужен. В проекте разработки архив создаётся командой `python3 Tools/package_release.py --package core`.
+
+После публикации изменений можно установить ядро через **Install package from Git URL**:
 
 ```text
-https://github.com/sw1f1s/Motion-Matching-for-DOTS.git?path=Assets/Packages/com.collint.mmd#v0.1.0
+https://github.com/sw1f1s/Motion-Matching-for-DOTS.git?path=Assets/Packages/com.collint.mmd#main
 ```
 
-Ссылка закрепляет версию `v0.1.0`. Для обновлений из основной ветки замените `#v0.1.0` на `#main`.
-Entities 1.4.3, Entities Graphics 1.4.3, Unity Physics 1.4.3, Collections,
-Burst, Mathematics, Newtonsoft JSON, Input System и URP указаны в `package.json` и разрешаются UPM.
+Entities 1.4.3, Entities Graphics 1.4.3, Unity Physics 1.4.3, Collections, Burst, Mathematics, Newtonsoft JSON и URP указаны в `package.json` и разрешаются UPM. Input System, Animation и Terrain Physics объявлены в пакете Samples.
 
-`Samples` входит в пакет и содержит примеры интеграции, сцены, анимации и тесты. После установки он доступен в `Packages/com.collint.mmd/Samples`; в проекте разработки — в `Assets/Packages/com.collint.mmd/Samples`. Для тестов нужен Unity Test Framework.
+Для примеров сначала установите это ядро, затем `com.collint.mmd.samples-0.2.0.tgz`. Общий ZIP `mmd-with-samples-0.2.0.zip` содержит оба архива. Подробности — в [инструкции Samples](../com.collint.mmd.samples/README.md). Git-установка из общего репозитория может скачивать и содержимое Samples; отдельный архив позволяет скачать только ядро. Старый тег `v0.1.0` содержит прежний объединённый пакет.
 
-Код распространяется под MIT; сторонние анимации и модели сохраняют исходные условия.
-См. [Third Party Notices](Third%20Party%20Notices.md).
+Код MMD распространяется под MIT. Сторонние анимации и модели принадлежат пакету Samples и сохраняют исходные условия; см. его [Third Party Notices](../com.collint.mmd.samples/Third%20Party%20Notices.md).
 
 ## Как работает
 
@@ -31,7 +32,7 @@ Burst, Mathematics, Newtonsoft JSON, Input System и URP указаны в `pack
 
 1. Импортируйте клипы и настройте совместимые Rig/Avatar. Зацикливание задаётся через **Loop Time** у анимации.
 2. Создайте `MotionBakeConfiguration`: укажите целевой rig, пути корня/стоп, группы и клипы. Для обычного поиска выберите **Motion Matching**, для запуска отдельным запросом — **Action**.
-3. Нажмите **Bake Database** в инспекторе. Укажите путь к `.bytes` внутри `Assets`. В проекте разработки можно запекать прямо в Sample: `Assets/Packages/com.collint.mmd/Samples/Databases/Locomotion.bytes`. При установке из Git сохраняйте собственные базы и конфигурации в `Assets`.
+3. Нажмите **Bake Database** в инспекторе. Укажите путь к `.bytes` внутри `Assets`. В проекте разработки можно запекать прямо в Sample: `Assets/Packages/com.collint.mmd.samples/Databases/Locomotion.bytes`. При установке из Git сохраняйте собственные базы и конфигурации в `Assets`.
 
 Группы задаются именами; идентификаторы групп и Action ID генерируются автоматически. Количество групп не ограничено размером битовой маски. Клип может входить в несколько групп; их принадлежность хранится один раз на клип. База запекается под целевой скелет; персонажи с этим скелетом могут совместно использовать один BlobAsset. Ретаргетинг Humanoid выполняется при запекании. В **Bake Settings → Normalization Groups** можно закрепить группы для расчёта весов поиска; пустой список использует все клипы.
 
@@ -48,7 +49,7 @@ MmdGraphicsInstaller.Install(world, presentationGroup);
 
 Installers находятся в `ColInt.MMD.Lifecycle.Helpers`, `.Physics.Helpers` и `.Graphics.Helpers`. Мир должен уже содержать стандартные системы загрузки сцен/префабов, трансформов, физики и Entities Graphics. Проект управляет PlayerLoop, фиксированным шагом и одним singleton `MmdWorldState`, в который передаёт паузу.
 
-Загрузите базу через `MotionDatabaseCodec.Load(textAsset.GetData<byte>())`. На персонаже создайте обязательные данные из таблицы ниже; `MmdPlayback` начните со `Speed = 1f`, `MatchedFrame = -1`. Буфер запроса должен иметь размер `database.Value.FeatureCount`; заполните его до поиска. Скелет и начальную позу задайте по базе. Полный пример инициализации — [MmdSampleCharacterFactory](Samples/Scripts/Character/Helpers/MmdSampleCharacterFactory.cs).
+Загрузите базу через `MotionDatabaseCodec.Load(textAsset.GetData<byte>())`. На персонаже создайте обязательные данные из таблицы ниже; `MmdPlayback` начните со `Speed = 1f`, `MatchedFrame = -1`. Буфер запроса должен иметь размер `database.Value.FeatureCount`; заполните его до поиска. Скелет и начальную позу задайте по базе. Полный пример инициализации — [MmdSampleCharacterFactory](../com.collint.mmd.samples/Scripts/Character/Helpers/MmdSampleCharacterFactory.cs).
 
 Загруженный runtime BlobAsset принадлежит проекту: разделяйте его между персонажами и освобождайте после завершения jobs и удаления потребителей. Sample освобождает базы после своего мира.
 
@@ -102,12 +103,12 @@ GPU-префаб должен иметь `MmdGpuCharacterAuthoring` на кор�
 
 ## Примеры и отладка
 
-- [MMDSampleEnvironment](Samples/Scenes/MMDSampleEnvironment.unity) — интеграция с управлением персонажем, локомоцией, приседом, спринтом, слайдом, прыжком, падением, приземлением и Traversal. Эта игровая логика находится в `Samples/Scripts/Character/Movement`.
-- [MMDSampleBenchmark](Samples/Scenes/MMDSampleBenchmark.unity) — множество персонажей с одной базой и GPU-префабом. Количество, seed и область движения задаются на **Benchmark Characters**; каждый персонаж получает свой `MmdSampleInput` от системы выбора цели.
+- [MMDSampleEnvironment](../com.collint.mmd.samples/Scenes/MMDSampleEnvironment.unity) — интеграция с управлением персонажем, локомоцией, приседом, спринтом, слайдом, прыжком, падением, приземлением и Traversal. Эта игровая логика находится в `Scripts/Character/Movement` пакета Samples.
+- [MMDSampleBenchmark](../com.collint.mmd.samples/Scenes/MMDSampleBenchmark.unity) — множество персонажей с одной базой и GPU-префабом. Количество, seed и область движения задаются на **Benchmark Characters**; каждый персонаж получает свой `MmdSampleInput` от системы выбора цели.
 - `Locomotion.ReversalGroup` в Sample-конфигурации задаёт группу разворотов с упором ноги. При резкой смене направления бега/спринта поиск выбирает из неё и текущей группы скорости; после разворота возвращается к циклу. Группа `Reversal` в Sample содержит левые и правые клипы на 180°.
-- [MmdSampleWorld](Samples/Scripts/Lifecycle/MmdSampleWorld.cs) и [MmdSampleCharacterFactory](Samples/Scripts/Character/Helpers/MmdSampleCharacterFactory.cs) — примеры подключения систем, создания сущностей и освобождения ресурсов.
+- [MmdSampleWorld](../com.collint.mmd.samples/Scripts/Lifecycle/MmdSampleWorld.cs) и [MmdSampleCharacterFactory](../com.collint.mmd.samples/Scripts/Character/Helpers/MmdSampleCharacterFactory.cs) — примеры подключения систем, создания сущностей и освобождения ресурсов.
 
-Ввод Sample хранится на персонаже в `MmdSampleInput`: направление движения и камеры, режим ходьба/бег, удерживаемый спринт, переключатель присяда и одноразовые нажатия. Маркер `MmdSamplePlayerInput` подключает сущность к `MmdSamplePlayerInputSystem`; его необязательная ссылка `Camera` задаёт направление движения относительно камеры. `InputSystemActions.inputactions` находится в `Samples/Configurations`, генерируемый класс — в `Samples/Scripts/Character/Input/Data`. Биндинги меняются в Unity Input Actions.
+Ввод Sample хранится на персонаже в `MmdSampleInput`: направление движения и камеры, режим ходьба/бег, удерживаемый спринт, переключатель присяда и одноразовые нажатия. Маркер `MmdSamplePlayerInput` подключает сущность к `MmdSamplePlayerInputSystem`; его необязательная ссылка `Camera` задаёт направление движения относительно камеры. `InputSystemActions.inputactions` находится в `Configurations` пакета Samples, генерируемый класс — в `Scripts/Character/Input/Data` пакета Samples. Биндинги меняются в Unity Input Actions.
 
 Система считывает действия каждый кадр и сохраняет нажатия до шага симуляции; `MmdSampleInputCleanupSystem` очищает их после обработки состояний. Боты записывают тот же компонент своей системой без маркера игрока. `MmdSampleSimulationDriver` только вызывает шаги мира; у `MmdSampleWorld` нет глобального ввода или `SetInput`. Например: `entityManager.SetComponentData(character, new MmdSampleInput { Movement = direction, Run = true });`.
 
@@ -117,4 +118,4 @@ GPU-префаб должен иметь `MmdGpuCharacterAuthoring` на кор�
 
 **Window → Motion Matching for DOTS → Debugger** показывает сущности, текущие клипы, группы и прогресс. В развёрнутой карточке доступны переходы и история последних пяти клипов; **Show in Entities Hierarchy** выбирает сущность для инспекции. Траектория отображается через `MmdTrajectoryDebug`.
 
-Тесты находятся в `Samples/Tests/EditMode` и `Samples/Tests/PlayMode` и запускаются через Unity Test Runner. Производительность измеряйте в Profiler при одинаковых количестве персонажей, seed и частоте симуляции.
+Тесты поставляются в отдельном пакете Samples, в `Tests/EditMode` и `Tests/PlayMode`. При UPM-установке добавьте `"testables": ["com.collint.mmd.samples"]` в `Packages/manifest.json` и установите Unity Test Framework; затем запускайте тесты через Unity Test Runner. Производительность измеряйте в Profiler при одинаковых количестве персонажей, seed и частоте симуляции.

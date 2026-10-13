@@ -24,7 +24,9 @@ namespace ColInt.MMD.Tests {
 			first.SetActive(false);
 			second.SetActive(false);
 			var source = MotionDatabaseFixture.Create();
-			source.Groups = new[] { new MotionGroup { Name = new Unity.Collections.FixedString64Bytes("Walk"), Tags = 2 } };
+			source.Groups = new[] { new MotionGroup { Name = new Unity.Collections.FixedString64Bytes("Walk"), Id = 2 } };
+			source.Clips[0].Groups = System.Array.Empty<int>();
+			source.Clips[2].Groups = System.Array.Empty<int>();
 			var database = new TextAsset(MotionDatabaseCodec.Write(source));
 			var configuration = ScriptableObject.CreateInstance<MmdSampleCharacterConfiguration>();
 			try {

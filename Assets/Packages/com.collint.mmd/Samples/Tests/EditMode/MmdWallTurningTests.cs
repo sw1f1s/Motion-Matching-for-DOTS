@@ -1,3 +1,6 @@
+using ColInt.MMD.MotionMatching.Helpers;
+using ColInt.MMD.MotionMatching.Data;
+using ColInt.MMD.Database.Helpers;
 using ColInt.MMD.Lifecycle.Components;
 using ColInt.MMD.Lifecycle.Data;
 using ColInt.MMD.MotionMatching.Components;
@@ -38,10 +41,10 @@ namespace ColInt.MMD.Tests {
 							sample.Tick();
 						}
 						var control = manager.GetComponentData<MmdSampleCharacterControl>(actor);
-						Assert.That(manager.GetComponentData<MmdSearchSettings>(actor).RequiredTags, Is.EqualTo(control.IdleTags));
+						Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(actor), MmdMotionGroupUsage.Required), Is.EqualTo(control.IdleGroup));
 						var movement = new float2(x, z);
 						float error = math.abs(MmdSampleFacing.YawError(manager.GetComponentData<LocalTransform>(actor).Rotation, movement));
-						uint previousTags = control.IdleTags;
+						int previousGroup = control.IdleGroup;
 						int changes = 0;
 						int turnTicks = 0;
 						bool movedWhileTurning = false;
@@ -51,12 +54,12 @@ namespace ColInt.MMD.Tests {
 							sample.Tick();
 							var settings = manager.GetComponentData<MmdSearchSettings>(actor);
 							var playback = manager.GetComponentData<MmdPlayback>(actor);
-							uint gait = settings.RequiredTags & ~control.StartTags;
-							if (gait != previousTags) {
+							int gait = MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(actor), MmdMotionGroupUsage.Required, control.StartGroup);
+							if (gait != previousGroup) {
 								changes++;
-								previousTags = gait;
+								previousGroup = gait;
 							}
-							if (settings.RequiredTags == control.TurnTags) {
+							if (MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(actor), MmdMotionGroupUsage.Required) == control.TurnGroup) {
 								turnTicks++;
 								Assert.That(playback.Speed, Is.EqualTo(1f), "Wall contact must not slow a turn in place.");
 							}
@@ -77,7 +80,7 @@ namespace ColInt.MMD.Tests {
 							Assert.That(turnTicks, Is.GreaterThan(0));
 						}
 						Assert.That(changes, Is.LessThanOrEqualTo(3));
-						Assert.That(previousTags, Is.EqualTo(run ? control.RunTags : control.WalkTags));
+						Assert.That(previousGroup, Is.EqualTo(run ? control.RunGroup : control.WalkGroup));
 						float2 velocity = manager.GetComponentData<PhysicsVelocity>(actor).Linear.xz;
 						Assert.That(math.length(velocity), Is.GreaterThan((run ? configuration.Locomotion.RunSpeed : configuration.Locomotion.WalkSpeed) * 0.9f));
 						Assert.That(math.dot(math.normalizesafe(velocity), movement), Is.GreaterThan(0.98f));
@@ -103,17 +106,17 @@ namespace ColInt.MMD.Tests {
 							sample.Tick();
 						}
 						var control = manager.GetComponentData<MmdSampleCharacterControl>(actor);
-						uint previousTags = manager.GetComponentData<MmdSearchSettings>(actor).RequiredTags & ~control.StartTags;
+						int previousGroup = MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(actor), MmdMotionGroupUsage.Required, control.StartGroup);
 						int changes = 0;
 						for (int tick = 0; tick < 360; tick++) {
 							float angle = math.radians(30f) * math.min(tick / 180f, 1f);
 							var direction = new float2(math.sin(angle), math.cos(angle));
 							sample.SetInput(new MmdSampleInput { Movement = direction, Facing = direction, Run = true });
 							sample.Tick();
-							uint tags = manager.GetComponentData<MmdSearchSettings>(actor).RequiredTags & ~control.StartTags;
-							if (tags != previousTags) {
+							int group = MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(actor), MmdMotionGroupUsage.Required, control.StartGroup);
+							if (group != previousGroup) {
 								changes++;
-								previousTags = tags;
+								previousGroup = group;
 							}
 							var transform = manager.GetComponentData<LocalTransform>(actor);
 							Assert.That(math.abs(MmdSampleFacing.YawError(transform.Rotation, direction)), Is.LessThan(math.radians(5f)));

@@ -1,3 +1,5 @@
+using ColInt.MMD.MotionMatching.Helpers;
+using ColInt.MMD.MotionMatching.Data;
 using ColInt.MMD.Actions.Components;
 using ColInt.MMD.Lifecycle.Components;
 using ColInt.MMD.MotionMatching.Components;
@@ -39,7 +41,7 @@ namespace ColInt.MMD.Samples.Character.Movement.SlideState.Systems {
 				ref MmdActionRequest request,
 				ref MmdSearchSettings settings,
 				ref MmdPlayback playback,
-				ref MmdSampleStateTransition transition) {
+				ref MmdSampleStateTransition transition, DynamicBuffer<MmdMotionGroup> groups) {
 				current.Elapsed += DeltaTime;
 				if (math.length(progress.Velocity) <= slide.StopSpeed) {
 					transition.Request<MmdSampleSlideExit>(MmdSampleStatePriority.Completion);
@@ -50,8 +52,8 @@ namespace ColInt.MMD.Samples.Character.Movement.SlideState.Systems {
 				}
 				if (action.ActionId != 0 || action.Rejected) {
 					MmdSampleAnimationRequest.Cancel(ref request);
-					settings.RequiredTags = slide.MotionTags;
-					settings.ExcludedTags = 0;
+					MmdMotionGroups.Set(groups, MmdMotionGroupUsage.Required, slide.MotionGroup);
+					MmdMotionGroups.Set(groups, MmdMotionGroupUsage.Excluded, 0);
 					settings.PreferLoop = true;
 					playback.SearchCountdown = 0f;
 				}

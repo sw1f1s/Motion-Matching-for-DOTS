@@ -1,3 +1,6 @@
+using ColInt.MMD.Database.Helpers;
+using ColInt.MMD.MotionMatching.Helpers;
+using ColInt.MMD.MotionMatching.Data;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -159,8 +162,10 @@ namespace ColInt.MMD.Editor.Diagnostics {
 			if (result.HasNames) {
 				result.DatabasePath = catalog.DatabasePath;
 			}
-			result.RequiredGroups = GroupNames(ref database, result.Search.RequiredTags, "Unrestricted");
-			result.ExcludedGroups = GroupNames(ref database, result.Search.ExcludedTags, "None");
+			result.RequiredGroups = manager.HasComponent<MmdMotionGroup>(entity)
+				? FilterGroupNames(ref database, manager.GetBuffer<MmdMotionGroup>(entity, true), MmdMotionGroupUsage.Required, "Unrestricted") : "Unrestricted";
+			result.ExcludedGroups = manager.HasComponent<MmdMotionGroup>(entity)
+				? FilterGroupNames(ref database, manager.GetBuffer<MmdMotionGroup>(entity, true), MmdMotionGroupUsage.Excluded, "None") : "None";
 			int index = result.Playback.ClipIndex;
 			if (index < 0 || index >= database.Clips.Length || !math.isfinite(result.Playback.Time) || !math.isfinite(result.Playback.Speed)) {
 				result.Problem = "Invalid playback clip or time";
@@ -175,7 +180,7 @@ namespace ColInt.MMD.Editor.Diagnostics {
 			result.Loop = clip.Loop;
 			result.Progress = math.saturate(result.Playback.Time / clip.Duration);
 			result.Frame = MmdAnimationMath.FrameAt(ref database, index, result.Playback.Time) - clip.FirstFrame;
-			result.Groups = GroupNames(ref database, clip.Tags, "Ungrouped");
+			result.Groups = ClipGroupNames(ref database, clip);
 			if (!result.Disabled && !result.Prefab && !paused && result.Problem.Length == 0) {
 				result.Status = result.Playback.Speed == 0f ? "Stopped" : result.Action.ActionId != 0 && !result.Action.Completed ? "Action" : "Playing";
 			}
@@ -204,24 +209,32 @@ namespace ColInt.MMD.Editor.Diagnostics {
 			return duration <= 0f ? 1f : math.saturate(elapsed / duration);
 		}
 
-		private static string GroupNames(ref MotionDatabase database, uint tags, string empty) {
-			if (tags == 0) {
-				return empty;
-			}
+		private static string FilterGroupNames(ref MotionDatabase database, in DynamicBuffer<MmdMotionGroup> groups, MmdMotionGroupUsage usage, string empty) {
 			var names = new List<string>();
-			uint known = 0;
 			for (int index = 0; index < database.Groups.Length; index++) {
-				ref var group = ref database.Groups[index];
-				if ((tags & group.Tags) != 0) {
-					names.Add(group.Name.ToString());
-					known |= group.Tags;
+				int id = database.Groups[index].Id;
+				if (MmdMotionGroups.Contains(groups, id, usage)) {
+					names.Add(GroupName(ref database, id));
 				}
 			}
-			uint unknown = tags & ~known;
-			if (unknown != 0) {
-				names.Add($"Unmapped 0x{unknown:X}");
+			return names.Count == 0 ? empty : string.Join(" / ", names);
+		}
+
+		private static string ClipGroupNames(ref MotionDatabase database, in MotionClip clip) {
+			var names = new List<string>();
+			foreach (int id in MotionDatabaseGroups.GetIds(ref database, clip)) {
+				names.Add(GroupName(ref database, id));
 			}
-			return string.Join(" / ", names);
+			return names.Count == 0 ? "Ungrouped" : string.Join(" / ", names);
+		}
+
+		private static string GroupName(ref MotionDatabase database, int id) {
+			for (int index = 0; index < database.Groups.Length; index++) {
+				if (database.Groups[index].Id == id) {
+					return database.Groups[index].Name.ToString();
+				}
+			}
+			return "Unmapped #" + id;
 		}
 	}
 }

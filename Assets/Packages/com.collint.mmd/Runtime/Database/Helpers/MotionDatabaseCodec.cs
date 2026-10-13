@@ -10,7 +10,7 @@ using Unity.Mathematics;
 
 namespace ColInt.MMD.Database.Helpers {
 	public static class MotionDatabaseCodec {
-		public const int Version = 5;
+		public const int Version = 6;
 		private const int GroupRecordBytes = 70;
 		private const uint Magic = 0x31444D4D;
 		private const int MaximumElements = 100000000;
@@ -29,18 +29,31 @@ namespace ColInt.MMD.Database.Helpers {
 					writer.Write(positions);
 					writer.Write(rotations);
 					writer.Write(scales);
+					int memberships = 0;
+					foreach (var clip in source.Clips) {
+						memberships = checked(memberships + clip.Groups.Length);
+					}
+					writer.Write(memberships);
 					for (int bone = 0; bone < source.Parents.Length; bone++) {
 						writer.Write(source.Parents[bone]);
 						writer.Write(source.BoneNameHashes[bone]);
 					}
-					foreach (MotionClip clip in source.Clips) {
+					int groupOffset = 0;
+					foreach (MotionClipSource clip in source.Clips) {
 						writer.Write(clip.FirstFrame);
 						writer.Write(clip.FrameCount);
 						writer.Write(clip.Duration);
 						writer.Write(clip.SampleRate);
-						writer.Write(clip.Tags);
+						writer.Write(groupOffset);
+						writer.Write(clip.Groups.Length);
+						groupOffset += clip.Groups.Length;
 						writer.Write(clip.ActionId);
 						writer.Write(clip.Loop);
+					}
+					foreach (var clip in source.Clips) {
+						foreach (int group in clip.Groups) {
+							writer.Write(group);
+						}
 					}
 					foreach (MotionFrame frame in source.Frames) {
 						writer.Write(frame.ClipIndex);
@@ -69,7 +82,7 @@ namespace ColInt.MMD.Database.Helpers {
 						writer.Write((byte)name.Length);
 						writer.Write(name);
 						writer.Write(new byte[61 - name.Length]);
-						writer.Write(group.Tags);
+						writer.Write(group.Id);
 						writer.Write(group.ActionId);
 					}
 					writer.Write(source.LeftFootBone);
@@ -96,7 +109,7 @@ namespace ColInt.MMD.Database.Helpers {
 
 		// TextAsset.GetData<byte>() exposes the asset's existing memory without a managed byte[] copy.
 		public static unsafe BlobAssetReference<MotionDatabase> Load(NativeArray<byte> bytes) {
-			if (bytes.Length < 36) {
+			if (bytes.Length < 40) {
 				throw new InvalidDataException("Truncated MMD database.");
 			}
 			using (var stream = new UnmanagedMemoryStream((byte*)NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(bytes), bytes.Length)) {
@@ -118,10 +131,14 @@ namespace ColInt.MMD.Database.Helpers {
 				int positions = Count(reader);
 				int rotations = Count(reader);
 				int scales = Count(reader);
+				int memberships = reader.ReadInt32();
+				if (memberships < 0 || memberships > MaximumElements) {
+					throw new InvalidDataException("Invalid clip group membership count.");
+				}
 				long poses = (long)frames * bones;
 				long tracks = (long)clips * bones;
 				long featureSamples = (long)frames * features;
-				long expected = 36L + bones * 8L + clips * 25L + frames * 36L + tracks * 13L +
+				long expected = 40L + bones * 8L + clips * 29L + memberships * 4L + frames * 36L + tracks * 13L +
 					positions * 12L + rotations * 8L + scales * 12L + featureSamples * 4L + features * 4L;
 				if (poses > MaximumElements || tracks > MaximumElements || featureSamples > MaximumElements ||
 					positions < tracks || rotations < tracks || scales < tracks || positions > poses || rotations > poses || scales > poses ||
@@ -130,10 +147,10 @@ namespace ColInt.MMD.Database.Helpers {
 				}
 				stream.Position = expected;
 				int groups = reader.ReadInt32();
-				if (groups < 0 || groups > 32 || stream.Length != expected + 12 + groups * GroupRecordBytes) {
+				if (groups < 0 || groups > MaximumElements || stream.Length != expected + 12 + (long)groups * GroupRecordBytes) {
 					throw new InvalidDataException("Invalid animation group catalog size.");
 				}
-				stream.Position = 36;
+				stream.Position = 40;
 				using (var builder = new BlobBuilder(Allocator.Temp)) {
 					ref var database = ref builder.ConstructRoot<MotionDatabase>();
 					database.FeatureCount = features;
@@ -143,13 +160,36 @@ namespace ColInt.MMD.Database.Helpers {
 						parents[bone] = reader.ReadInt32();
 						hashes[bone] = reader.ReadInt32();
 					}
-					var clipData = builder.Allocate(ref database.Clips, clips);
+					var clipSources = new MotionClipSource[clips];
+					var groupOffsets = new int[clips];
 					for (int index = 0; index < clips; index++) {
-						clipData[index] = new MotionClip {
-							FirstFrame = reader.ReadInt32(), FrameCount = reader.ReadInt32(), Duration = reader.ReadSingle(),
-							SampleRate = reader.ReadSingle(), Tags = reader.ReadUInt32(), ActionId = reader.ReadInt32(), Loop = reader.ReadBoolean()
+						var clip = new MotionClipSource {
+							FirstFrame = reader.ReadInt32(), FrameCount = reader.ReadInt32(), Duration = reader.ReadSingle(), SampleRate = reader.ReadSingle()
 						};
+						int offset = reader.ReadInt32();
+						int count = reader.ReadInt32();
+						if (offset < 0 || count < 0 || (long)offset + count > memberships) {
+							throw new InvalidDataException("Invalid clip group range.");
+						}
+						groupOffsets[index] = offset;
+						clip.Groups = new int[count];
+						clip.ActionId = reader.ReadInt32();
+						clip.Loop = reader.ReadBoolean();
+						clipSources[index] = clip;
 					}
+					long membershipStart = stream.Position;
+					for (int index = 0; index < clips; index++) {
+						stream.Position = membershipStart + groupOffsets[index] * 4L;
+						for (int group = 0; group < clipSources[index].Groups.Length; group++) {
+							clipSources[index].Groups[group] = reader.ReadInt32();
+						}
+					}
+					try {
+						MotionDatabaseBuilder.CopyClips(builder, ref database, clipSources);
+					} catch (ArgumentException exception) {
+						throw new InvalidDataException("Invalid clip group membership.", exception);
+					}
+					stream.Position = membershipStart + memberships * 4L;
 					var frameData = builder.Allocate(ref database.Frames, frames);
 					for (int index = 0; index < frames; index++) {
 						int clip = reader.ReadInt32();
@@ -207,7 +247,7 @@ namespace ColInt.MMD.Database.Helpers {
 		}
 
 		private static void ValidateVersion(BinaryReader reader) {
-			if (reader.BaseStream.Length < 36 || reader.ReadUInt32() != Magic) {
+			if (reader.BaseStream.Length < 40 || reader.ReadUInt32() != Magic) {
 				throw new InvalidDataException("Unsupported or truncated MMD database.");
 			}
 			int version = reader.ReadInt32();
@@ -225,7 +265,7 @@ namespace ColInt.MMD.Database.Helpers {
 			try {
 				return new MotionGroup {
 					Name = new FixedString64Bytes(new UTF8Encoding(false, true).GetString(name, 0, length)),
-					Tags = reader.ReadUInt32(), ActionId = reader.ReadInt32()
+					Id = reader.ReadInt32(), ActionId = reader.ReadInt32()
 				};
 			} catch (DecoderFallbackException exception) {
 				throw new InvalidDataException("Invalid animation group name encoding.", exception);
@@ -235,7 +275,7 @@ namespace ColInt.MMD.Database.Helpers {
 		private static void WriteChannels(BinaryWriter writer, MotionDatabaseSource source, MotionPoseTrack[] tracks, MotionPoseChannels channel) {
 			int bones = source.Parents.Length;
 			for (int clipIndex = 0; clipIndex < source.Clips.Length; clipIndex++) {
-				MotionClip clip = source.Clips[clipIndex];
+				MotionClipSource clip = source.Clips[clipIndex];
 				for (int bone = 0; bone < bones; bone++) {
 					int count = (tracks[clipIndex * bones + bone].AnimatedChannels & channel) != 0 ? clip.FrameCount : 1;
 					for (int sample = 0; sample < count; sample++) {
@@ -252,12 +292,20 @@ namespace ColInt.MMD.Database.Helpers {
 
 		private static MotionDatabaseSource ExpandSource(ref MotionDatabase database) {
 			var source = new MotionDatabaseSource {
-				FeatureCount = database.FeatureCount, Groups = database.Groups.ToArray(), Clips = database.Clips.ToArray(),
+				FeatureCount = database.FeatureCount, Groups = database.Groups.ToArray(), Clips = new MotionClipSource[database.Clips.Length],
 				Frames = database.Frames.ToArray(), Parents = database.Parents.ToArray(), BoneNameHashes = database.BoneNameHashes.ToArray(),
 				Features = database.Features.ToArray(), FeatureScales = database.FeatureScales.ToArray(),
 				LeftFootBone = database.LeftFootBone, RightFootBone = database.RightFootBone,
 				Poses = new JointPose[database.Frames.Length * database.Parents.Length]
 			};
+			for (int index = 0; index < source.Clips.Length; index++) {
+				var clip = database.Clips[index];
+				var groups = MotionDatabaseGroups.GetIds(ref database, clip);
+				source.Clips[index] = new MotionClipSource {
+					FirstFrame = clip.FirstFrame, FrameCount = clip.FrameCount, Duration = clip.Duration, SampleRate = clip.SampleRate,
+					ActionId = clip.ActionId, Loop = clip.Loop, Groups = groups
+				};
+			}
 			for (int frame = 0; frame < source.Frames.Length; frame++) {
 				for (int bone = 0; bone < source.Parents.Length; bone++) {
 					source.Poses[frame * source.Parents.Length + bone] = MmdAnimationMath.PoseSample(ref database, frame, bone);

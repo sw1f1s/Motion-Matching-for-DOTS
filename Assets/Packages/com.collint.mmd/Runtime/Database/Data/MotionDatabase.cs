@@ -5,6 +5,7 @@ namespace ColInt.MMD.Database.Data {
 	public struct MotionDatabase {
 		public BlobArray<MotionGroup> Groups;
 		public BlobArray<MotionClip> Clips;
+		public BlobArray<ulong> ClipGroupWords;
 		public BlobArray<MotionFrame> Frames;
 		public BlobArray<MotionPoseTrack> PoseTracks;
 		public BlobArray<float3> Positions;

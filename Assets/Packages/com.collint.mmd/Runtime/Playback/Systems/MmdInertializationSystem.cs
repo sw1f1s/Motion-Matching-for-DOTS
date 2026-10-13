@@ -3,6 +3,8 @@ using ColInt.MMD.Database.Components;
 using ColInt.MMD.Database.Data;
 using ColInt.MMD.Lifecycle.Components;
 using ColInt.MMD.MotionMatching.Helpers;
+using ColInt.MMD.MotionMatching.Components;
+using ColInt.MMD.MotionMatching.Data;
 using ColInt.MMD.Playback.Components;
 using ColInt.MMD.Playback.Helpers;
 using ColInt.MMD.RootMotion.Components;
@@ -33,7 +35,7 @@ namespace ColInt.MMD.Playback.Systems {
 			public float DeltaTime;
 
 			private void Execute(in MmdDatabase data, in MmdPlayback playback, in MmdInertialization settings,
-				in MmdActionState action, in LocalTransform transform, ref MmdRootMotion motion,
+				in MmdActionState action, in DynamicBuffer<MmdMotionGroup> groups, in LocalTransform transform, ref MmdRootMotion motion,
 				ref MmdInertializationState state, DynamicBuffer<MmdLocalPose> poses, DynamicBuffer<MmdInertialPose> history) {
 				if (DeltaTime <= 0f || !motion.Valid) {
 					return;
@@ -49,7 +51,7 @@ namespace ColInt.MMD.Playback.Systems {
 				}
 				ref var database = ref data.Value.Value;
 				float previousTime = playback.Time - DeltaTime * math.max(0f, playback.Speed);
-				UpdatePoseAlignment(ref database, playback, settings, action, motion, hasHistory, switched, previousTime, ref state);
+				UpdatePoseAlignment(ref database, playback, settings, action, groups, motion, hasHistory, switched, previousTime, ref state);
 				state.Elapsed = math.min(state.Elapsed + DeltaTime, math.max(state.PoseDuration, settings.RootDuration));
 				for (int bone = 0; bone < poses.Length; bone++) {
 					var target = poses[bone].Value;
@@ -116,7 +118,7 @@ namespace ColInt.MMD.Playback.Systems {
 			}
 
 			private void UpdatePoseAlignment(ref MotionDatabase database, in MmdPlayback playback, in MmdInertialization settings,
-				in MmdActionState action, in MmdRootMotion motion, bool hasHistory, bool switched, float previousTime,
+				in MmdActionState action, in DynamicBuffer<MmdMotionGroup> groups, in MmdRootMotion motion, bool hasHistory, bool switched, float previousTime,
 				ref MmdInertializationState state) {
 				if (!hasHistory) {
 					state.StationaryPoseOffset = float3.zero;
@@ -128,7 +130,7 @@ namespace ColInt.MMD.Playback.Systems {
 				float3 offset = float3.zero;
 				bool stationaryLoop = settings.PoseDuration > 0f && database.FeatureCount == LocomotionSchema.Dimension &&
 					action.ActionId == 0 && database.Clips[playback.ClipIndex].Loop &&
-					(database.Clips[playback.ClipIndex].Tags & settings.StationaryPoseTags) != 0 &&
+					MmdMotionGroups.Any(ref database, database.Clips[playback.ClipIndex], groups, MmdMotionGroupUsage.StationaryPose) &&
 					math.lengthsq(state.RootVelocity.xz) <= 0.0025f &&
 					math.lengthsq(motion.Translation.xz / DeltaTime) <= 0.0025f;
 				state.PoseDuration = stationaryLoop ? math.max(settings.PoseDuration, settings.StationaryPoseDuration) : settings.PoseDuration;

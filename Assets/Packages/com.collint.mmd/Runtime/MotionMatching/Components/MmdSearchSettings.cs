@@ -2,8 +2,6 @@ using Unity.Entities;
 
 namespace ColInt.MMD.MotionMatching.Components {
 	public struct MmdSearchSettings : IComponentData {
-		public uint RequiredTags;
-		public uint ExcludedTags;
 		public bool PreferLoop;
 		public float Interval;
 		public float SwitchPenalty;

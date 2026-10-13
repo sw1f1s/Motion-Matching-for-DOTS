@@ -1,3 +1,6 @@
+using Unity.Burst;
+using ColInt.MMD.MotionMatching.Helpers;
+using ColInt.MMD.MotionMatching.Data;
 using ColInt.MMD.Actions.Components;
 using ColInt.MMD.Lifecycle.Components;
 using ColInt.MMD.MotionMatching.Components;
@@ -20,14 +23,19 @@ namespace ColInt.MMD.Samples.Character.Movement.CrouchState.Systems {
 			if (SystemAPI.GetSingleton<MmdWorldState>().IsPaused) {
 				return;
 			}
-			foreach (var (crouch, progress, smoothing, movement, request, settings, playback) in SystemAPI.Query<RefRO<MmdSampleCrouch>, RefRO<MmdSampleCrouchProgress>, RefRW<MmdInertialization>, RefRW<MmdSampleMovement>, RefRW<MmdActionRequest>,
-				RefRW<MmdSearchSettings>, RefRW<MmdPlayback>>().WithAll<MmdSampleStateStarted<MmdSampleCrouch>>()) {
-				smoothing.ValueRW = progress.ValueRO.StandingInertialization;
-				movement.ValueRW = new MmdSampleMovement { CrouchCollider = true };
-				MmdSampleAnimationRequest.Cancel(ref request.ValueRW);
-				settings.ValueRW.RequiredTags = crouch.ValueRO.IdleTags;
-				playback.ValueRW.SearchCountdown = 0f;
-				playback.ValueRW.Speed = 1f;
+			state.Dependency = new StartJob().ScheduleParallel(state.Dependency);
+		}
+
+		[BurstCompile]
+		[WithAll(typeof(MmdSampleStateStarted<MmdSampleCrouch>))]
+		private partial struct StartJob : IJobEntity {
+			private void Execute(in MmdSampleCrouch crouch, in MmdSampleCrouchProgress progress, ref MmdInertialization smoothing, ref MmdSampleMovement movement, ref MmdActionRequest request, ref MmdSearchSettings settings, ref MmdPlayback playback, DynamicBuffer<MmdMotionGroup> groups) {
+				smoothing = progress.StandingInertialization;
+				movement = new MmdSampleMovement { CrouchCollider = true };
+				MmdSampleAnimationRequest.Cancel(ref request);
+				MmdMotionGroups.Set(groups, MmdMotionGroupUsage.Required, crouch.IdleGroup);
+				playback.SearchCountdown = 0f;
+				playback.Speed = 1f;
 			}
 		}
 	}

@@ -1,5 +1,6 @@
 using System;
 using ColInt.MMD.Database.Data;
+using ColInt.MMD.MotionMatching.Data;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -15,7 +16,7 @@ namespace ColInt.MMD.Database.Helpers {
 				database.LeftFootBone = source.LeftFootBone;
 				database.RightFootBone = source.RightFootBone;
 				Copy(builder, ref database.Groups, source.Groups);
-				Copy(builder, ref database.Clips, source.Clips);
+				CopyClips(builder, ref database, source.Clips);
 				Copy(builder, ref database.Frames, source.Frames);
 				Copy(builder, ref database.PoseTracks, tracks);
 				PackPoses(builder, ref database, source, tracks, positions, rotations, scales);
@@ -43,19 +44,14 @@ namespace ColInt.MMD.Database.Helpers {
 				(source.LeftFootBone >= 0 && (source.LeftFootBone == source.RightFootBone || source.FeatureCount != 27))) {
 				throw new ArgumentException("Locomotion foot bindings must identify two different bones in the 27-feature schema.");
 			}
-			if (source.Groups.Length > 32) {
-				throw new ArgumentException("A database supports up to 32 animation groups.");
-			}
-			uint groupMask = 0;
+			var ids = new System.Collections.Generic.HashSet<int>();
 			var names = new System.Collections.Generic.HashSet<FixedString64Bytes>();
 			var actions = new System.Collections.Generic.HashSet<int>();
 			foreach (MotionGroup group in source.Groups) {
-				if (group.Name.IsEmpty || group.Tags == 0 || (group.Tags & (group.Tags - 1)) != 0 ||
-					(groupMask & group.Tags) != 0 || !names.Add(group.Name) || group.ActionId < 0 ||
+				if (group.Name.IsEmpty || group.Id <= 0 || !ids.Add(group.Id) || !names.Add(group.Name) || group.ActionId < 0 ||
 					(group.ActionId != 0 && !actions.Add(group.ActionId))) {
 					throw new ArgumentException("Invalid or duplicate animation group metadata.");
 				}
-				groupMask |= group.Tags;
 			}
 			for (int bone = 0; bone < source.Parents.Length; bone++) {
 				if (source.Parents[bone] < -1 || source.Parents[bone] >= bone) {
@@ -64,7 +60,18 @@ namespace ColInt.MMD.Database.Helpers {
 			}
 			int first = 0;
 			for (int clipIndex = 0; clipIndex < source.Clips.Length; clipIndex++) {
-				MotionClip clip = source.Clips[clipIndex];
+				MotionClipSource clip = source.Clips[clipIndex];
+				if (clip.Groups == null) {
+					throw new ArgumentException("Clip group membership is required.");
+				}
+				int previousGroup = 0;
+				foreach (int group in clip.Groups) {
+					if (group <= previousGroup || !ids.Contains(group)) {
+						throw new ArgumentException("Clip groups must be sorted, unique catalog ids.");
+					}
+					previousGroup = group;
+				}
+
 				if (clip.FirstFrame != first || clip.FrameCount < 2 || !(clip.Duration > 0f) || !math.isfinite(clip.Duration) ||
 					!(clip.SampleRate > 0f) || !math.isfinite(clip.SampleRate) || (clip.ActionId != 0 && clip.Loop) ||
 					(long)first + clip.FrameCount > source.Frames.Length) {
@@ -126,20 +133,15 @@ namespace ColInt.MMD.Database.Helpers {
 				(database.LeftFootBone >= 0 && (database.LeftFootBone == database.RightFootBone || database.FeatureCount != 27))) {
 				throw new ArgumentException("Locomotion foot bindings must identify two different bones in the 27-feature schema.");
 			}
-			if (database.Groups.Length > 32) {
-				throw new ArgumentException("A database supports up to 32 animation groups.");
-			}
-			uint groupMask = 0;
+			var ids = new System.Collections.Generic.HashSet<int>();
 			var names = new System.Collections.Generic.HashSet<FixedString64Bytes>();
 			var actions = new System.Collections.Generic.HashSet<int>();
 			for (int index = 0; index < database.Groups.Length; index++) {
 				MotionGroup group = database.Groups[index];
-				if (group.Name.IsEmpty || group.Tags == 0 || (group.Tags & (group.Tags - 1)) != 0 ||
-					(groupMask & group.Tags) != 0 || !names.Add(group.Name) || group.ActionId < 0 ||
+				if (group.Name.IsEmpty || group.Id <= 0 || !ids.Add(group.Id) || !names.Add(group.Name) || group.ActionId < 0 ||
 					(group.ActionId != 0 && !actions.Add(group.ActionId))) {
 					throw new ArgumentException("Invalid or duplicate animation group metadata.");
 				}
-				groupMask |= group.Tags;
 			}
 			for (int bone = 0; bone < database.Parents.Length; bone++) {
 				if (database.Parents[bone] < -1 || database.Parents[bone] >= bone) {
@@ -149,6 +151,15 @@ namespace ColInt.MMD.Database.Helpers {
 			int first = 0;
 			for (int clipIndex = 0; clipIndex < database.Clips.Length; clipIndex++) {
 				MotionClip clip = database.Clips[clipIndex];
+				if (clip.FirstGroupWord < 0 || clip.GroupWordCount < 0 || (long)clip.FirstGroupWord + clip.GroupWordCount > database.ClipGroupWords.Length) {
+					throw new ArgumentException("Invalid clip group mask range.");
+				}
+				foreach (int group in MotionDatabaseGroups.GetIds(ref database, clip)) {
+					if (!ids.Contains(group)) {
+						throw new ArgumentException("Clip mask contains an undeclared group.");
+					}
+				}
+
 				if (clip.FirstFrame != first || clip.FrameCount < 2 || !(clip.Duration > 0f) || !math.isfinite(clip.Duration) ||
 					!(clip.SampleRate > 0f) || !math.isfinite(clip.SampleRate) || (clip.ActionId != 0 && clip.Loop) ||
 					(long)first + clip.FrameCount > database.Frames.Length) {
@@ -209,7 +220,7 @@ namespace ColInt.MMD.Database.Helpers {
 			rotations = 0;
 			scales = 0;
 			for (int clipIndex = 0; clipIndex < source.Clips.Length; clipIndex++) {
-				MotionClip clip = source.Clips[clipIndex];
+				MotionClipSource clip = source.Clips[clipIndex];
 				for (int bone = 0; bone < bones; bone++) {
 					JointPose first = source.Poses[clip.FirstFrame * bones + bone];
 					MotionPoseChannels channels = MotionPoseChannels.None;
@@ -243,7 +254,7 @@ namespace ColInt.MMD.Database.Helpers {
 			var scaleSamples = builder.Allocate(ref database.Scales, scales);
 			int bones = source.Parents.Length;
 			for (int clipIndex = 0; clipIndex < source.Clips.Length; clipIndex++) {
-				MotionClip clip = source.Clips[clipIndex];
+				MotionClipSource clip = source.Clips[clipIndex];
 				for (int bone = 0; bone < bones; bone++) {
 					MotionPoseTrack track = tracks[clipIndex * bones + bone];
 					for (int sample = 0; sample < clip.FrameCount; sample++) {
@@ -286,6 +297,39 @@ namespace ColInt.MMD.Database.Helpers {
 
 		private static bool UnitQuaternion(quaternion value) {
 			return math.all(math.isfinite(value.value)) && math.abs(math.lengthsq(value.value) - 1f) < 0.001f;
+		}
+
+		internal static void CopyClips(BlobBuilder builder, ref MotionDatabase database, MotionClipSource[] source) {
+			int count = 0;
+			foreach (var clip in source) {
+				int previous = 0;
+				foreach (int group in clip.Groups) {
+					if (group <= previous) {
+						throw new ArgumentException("Clip groups must be positive, sorted and unique.");
+					}
+					previous = group;
+				}
+				count = checked(count + BitMask.WordsForBits(previous));
+			}
+			var clips = builder.Allocate(ref database.Clips, source.Length);
+			var words = builder.Allocate(ref database.ClipGroupWords, count);
+			int offset = 0;
+			for (int index = 0; index < source.Length; index++) {
+				var clip = source[index];
+				int wordCount = clip.Groups.Length == 0 ? 0 : BitMask.WordsForBits(clip.Groups[clip.Groups.Length - 1]);
+				clips[index] = new MotionClip {
+					FirstFrame = clip.FirstFrame, FrameCount = clip.FrameCount, Duration = clip.Duration, SampleRate = clip.SampleRate,
+					ActionId = clip.ActionId, Loop = clip.Loop, FirstGroupWord = offset, GroupWordCount = wordCount
+				};
+				for (int word = 0; word < wordCount; word++) {
+					words[offset + word] = 0;
+				}
+				foreach (int group in clip.Groups) {
+					int bit = group - 1;
+					words[offset + (bit >> 6)] |= 1UL << (bit & 63);
+				}
+				offset += wordCount;
+			}
 		}
 
 		private static void Copy<T>(BlobBuilder builder, ref BlobArray<T> destination, T[] source) where T : unmanaged {

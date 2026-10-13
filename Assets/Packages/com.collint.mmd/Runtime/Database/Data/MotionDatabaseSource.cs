@@ -3,7 +3,7 @@ namespace ColInt.MMD.Database.Data {
 	// Managed loading/baking boundary; never stored in ECS.
 	public sealed class MotionDatabaseSource {
 		public MotionGroup[] Groups { get; set; } = System.Array.Empty<MotionGroup>();
-		public MotionClip[] Clips { get; set; }
+		public MotionClipSource[] Clips { get; set; }
 		public MotionFrame[] Frames { get; set; }
 		public JointPose[] Poses { get; set; }
 		public float[] Features { get; set; }

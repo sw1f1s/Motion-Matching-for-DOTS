@@ -9,9 +9,6 @@ namespace ColInt.MMD.Editor.Baking {
 			}
 			configuration.Update();
 			SerializedProperty groups = configuration.FindProperty("_groups");
-			if (groups.arraySize >= 32) {
-				throw new InvalidOperationException("A database supports up to 32 named groups.");
-			}
 			string name = "New Group";
 			int suffix = 2;
 			while (ContainsName(groups, name)) {

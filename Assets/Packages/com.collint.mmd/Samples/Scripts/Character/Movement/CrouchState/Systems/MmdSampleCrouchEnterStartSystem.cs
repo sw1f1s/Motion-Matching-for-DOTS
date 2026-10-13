@@ -1,3 +1,5 @@
+using ColInt.MMD.MotionMatching.Helpers;
+using ColInt.MMD.MotionMatching.Data;
 using ColInt.MMD.Actions.Components;
 using ColInt.MMD.Database.Components;
 using ColInt.MMD.Lifecycle.Components;
@@ -37,7 +39,7 @@ namespace ColInt.MMD.Samples.Character.Movement.CrouchState.Systems {
 
 			private void Execute(in MmdSampleCrouch crouch, ref MmdSampleCrouchProgress progress, ref MmdSampleCharacterControl control,
 				in PhysicsVelocity velocity, ref MmdSampleMovement movement, ref MmdSearchSettings settings, ref MmdPlayback playback,
-				ref MmdInertialization smoothing, in MmdDatabase data, ref MmdActionRequest request, DynamicBuffer<MmdSearchQueryElement> query) {
+				ref MmdInertialization smoothing, in MmdDatabase data, ref MmdActionRequest request, DynamicBuffer<MmdSearchQueryElement> query, DynamicBuffer<MmdMotionGroup> groups) {
 				progress.StandingControl = control;
 				progress.StandingInertialization = smoothing;
 				progress.StandingDirectionWeight = settings.TrajectoryDirectionWeight;
@@ -46,17 +48,17 @@ namespace ColInt.MMD.Samples.Character.Movement.CrouchState.Systems {
 				control.WalkSpeed = crouch.Speed;
 				control.RunSpeed = crouch.Speed;
 				control.SprintSpeed = crouch.Speed;
-				control.IdleTags = crouch.IdleTags;
-				control.WalkTags = crouch.MoveTags;
-				control.RunTags = crouch.MoveTags;
-				control.SprintTags = crouch.MoveTags;
-				control.TurnTags = crouch.TurnTags;
-				control.StartTags = crouch.StartTags;
+				control.IdleGroup = crouch.IdleGroup;
+				control.WalkGroup = crouch.MoveGroup;
+				control.RunGroup = crouch.MoveGroup;
+				control.SprintGroup = crouch.MoveGroup;
+				control.TurnGroup = crouch.TurnGroup;
+				control.StartGroup = crouch.StartGroup;
 				movement = new MmdSampleMovement { CrouchCollider = true };
 				int action = crouch.EnterAction;
-				settings.RequiredTags = stationary ? crouch.IdleTags : crouch.MoveTags | crouch.StartTags;
+				MmdMotionGroups.Set(groups, MmdMotionGroupUsage.Required, stationary ? crouch.IdleGroup : crouch.MoveGroup, stationary ? 0 : crouch.StartGroup);
 				smoothing.PoseDuration = math.max(smoothing.PoseDuration, crouch.TransitionDuration);
-				settings.ExcludedTags &= ~crouch.StartTags;
+				MmdMotionGroups.Remove(groups, crouch.StartGroup, MmdMotionGroupUsage.Excluded);
 				settings.TrajectoryPositionWeight = 1f;
 				playback.Speed = stationary ? 1f : math.saturate(crouch.Speed / crouch.AnimationSpeed);
 				playback.SearchCountdown = 0f;

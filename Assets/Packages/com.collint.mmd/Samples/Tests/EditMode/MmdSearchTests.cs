@@ -1,3 +1,4 @@
+using ColInt.MMD.MotionMatching.Data;
 using ColInt.MMD.Actions.Components;
 using ColInt.MMD.Database.Components;
 using ColInt.MMD.Database.Helpers;
@@ -9,12 +10,15 @@ using ColInt.MMD.Playback.Components;
 using ColInt.MMD.Samples.Lifecycle;
 using NUnit.Framework;
 using Unity.Mathematics;
+using Unity.Entities;
 using Unity.Transforms;
 
 namespace ColInt.MMD.Tests {
 	public class MmdSearchTests {
 		[Test]
 		public void EqualCostsPreferTheEarliestFrameEvenWhenContinuationIsEvaluatedFirst() {
+			int requiredGroup = 0;
+			int excludedGroup = 0;
 			var source = MotionDatabaseFixture.Create();
 			for (int frame = 11; frame < 22; frame++) {
 				for (int feature = 0; feature < source.FeatureCount; feature++) {
@@ -27,27 +31,29 @@ namespace ColInt.MMD.Tests {
 				var database = manager.GetComponentData<MmdDatabase>(actor);
 				var query = manager.GetBuffer<MmdSearchQueryElement>(actor);
 				LocomotionSchema.WriteTrajectory(query, float3.zero, 0f);
-				Assert.That(MotionSearch.Find(ref database.Value.Value, query, default, 16), Is.Zero);
+				Assert.That(MotionSearch.Find(ref database.Value.Value, query, default, SelectGroups(manager, actor, requiredGroup, excludedGroup), 16), Is.Zero);
 			}
 		}
 
-		[TestCase("RequiredTags")]
-		[TestCase("ExcludedTags")]
+		[TestCase("RequiredGroups")]
+		[TestCase("ExcludedGroups")]
 		[TestCase("Action")]
 		[TestCase("Endpoint")]
 		[TestCase("RemainingTime")]
 		[TestCase("PreferLoop")]
 		public void AnIneligibleContinuationCannotPruneAnEligibleMoreExpensiveClip(string rejection) {
+			int requiredGroup = 0;
+			int excludedGroup = 0;
 			var source = MotionDatabaseFixture.Create();
 			var continuation = source.Clips[0];
 			var eligible = source.Clips[1];
-			eligible.Tags = 2;
+			eligible.Groups = new[] { 2 };
 			var settings = new MmdSearchSettings { MinimumRemainingTime = 0.2f };
 			int frameIndex = 5;
-			if (rejection == "RequiredTags") {
-				settings.RequiredTags = 2;
-			} else if (rejection == "ExcludedTags") {
-				settings.ExcludedTags = 1;
+			if (rejection == "RequiredGroups") {
+				requiredGroup = 2;
+			} else if (rejection == "ExcludedGroups") {
+				excludedGroup = 1;
 			} else if (rejection == "Action") {
 				continuation.ActionId = 3;
 				continuation.Loop = false;
@@ -82,7 +88,7 @@ namespace ColInt.MMD.Tests {
 				}
 				// A moving request avoids the separate idle-tail policy.
 				query[14] = new MmdSearchQueryElement { Value = 1f };
-				int selected = MotionSearch.Find(ref database.Value.Value, query, settings, frameIndex);
+				int selected = MotionSearch.Find(ref database.Value.Value, query, settings, SelectGroups(manager, actor, requiredGroup, excludedGroup), frameIndex);
 				Assert.That(source.Frames[selected].ClipIndex, Is.EqualTo(1));
 			}
 		}
@@ -91,9 +97,11 @@ namespace ColInt.MMD.Tests {
 		[TestCase(1f, 0)]
 		[TestCase(8f, 1)]
 		public void PositionWeightCanPrioritizeBrakingOverAnIdenticalMovingFootPose(float weight, int expectedClip) {
+			int requiredGroup = 1;
+			int excludedGroup = 0;
 			var source = MotionDatabaseFixture.Create();
 			var other = source.Clips[1];
-			other.Tags = 1;
+			other.Groups = new[] { 1 };
 			source.Clips[1] = other;
 			for (int frame = 0; frame < source.Frames.Length; frame++) {
 				bool braking = source.Frames[frame].ClipIndex == 1;
@@ -118,8 +126,8 @@ namespace ColInt.MMD.Tests {
 				for (int point = 0; point < 3; point++) {
 					query[point * 4 + 1] = new MmdSearchQueryElement { Value = 0.225f };
 				}
-				var settings = new MmdSearchSettings { RequiredTags = 1, TrajectoryPositionWeight = weight };
-				int selected = MotionSearch.Find(ref database.Value.Value, query, settings, -1);
+				var settings = new MmdSearchSettings { TrajectoryPositionWeight = weight };
+				int selected = MotionSearch.Find(ref database.Value.Value, query, settings, SelectGroups(manager, actor, requiredGroup, excludedGroup), -1);
 				Assert.That(source.Frames[selected].ClipIndex, Is.EqualTo(expectedClip));
 			}
 		}
@@ -128,12 +136,14 @@ namespace ColInt.MMD.Tests {
 		[TestCase(true, true, 0)]
 		[TestCase(true, false, 1)]
 		public void LoopPreferenceSkipsTheMatchingOneShotButFallsBackWhenNoLoopIsEligible(bool preferLoop, bool loopEligible, int expectedClip) {
+			int requiredGroup = 1;
+			int excludedGroup = 0;
 			var source = MotionDatabaseFixture.Create();
 			var loop = source.Clips[0];
-			loop.Tags = loopEligible ? 1u : 8u;
+			loop.Groups = new[] { loopEligible ? 1 : 8 };
 			source.Clips[0] = loop;
 			var transition = source.Clips[1];
-			transition.Tags = 1;
+			transition.Groups = new[] { 1 };
 			transition.Loop = false;
 			source.Clips[1] = transition;
 			for (int frame = 0; frame < source.Frames.Length; frame++) {
@@ -149,17 +159,19 @@ namespace ColInt.MMD.Tests {
 				var query = manager.GetBuffer<MmdSearchQueryElement>(actor);
 				LocomotionSchema.WriteTrajectory(query, new float3(0f, 0f, 5f), 0f);
 				query[15] = default;
-				var settings = new MmdSearchSettings { RequiredTags = 1, PreferLoop = preferLoop, MinimumRemainingTime = 0.2f };
-				int selected = MotionSearch.Find(ref database.Value.Value, query, settings, -1);
+				var settings = new MmdSearchSettings { PreferLoop = preferLoop, MinimumRemainingTime = 0.2f };
+				int selected = MotionSearch.Find(ref database.Value.Value, query, settings, SelectGroups(manager, actor, requiredGroup, excludedGroup), -1);
 				Assert.That(source.Frames[selected].ClipIndex, Is.EqualTo(expectedClip));
 			}
 		}
 
 		[Test]
 		public void InterpolatedContinuationDoesNotLoseItsFootPhaseToAnotherClipAtHalfASample() {
+			int requiredGroup = 1;
+			int excludedGroup = 0;
 			var source = MotionDatabaseFixture.Create();
 			var other = source.Clips[1];
-			other.Tags = 1;
+			other.Groups = new[] { 1 };
 			source.Clips[1] = other;
 			for (int frame = 0; frame < source.Frames.Length; frame++) {
 				for (int feature = 0; feature < source.FeatureCount; feature++) {
@@ -174,20 +186,23 @@ namespace ColInt.MMD.Tests {
 				var data = manager.GetComponentData<MmdDatabase>(actor);
 				var query = manager.GetBuffer<MmdSearchQueryElement>(actor);
 				query[15] = new MmdSearchQueryElement { Value = 1f };
-				var settings = new MmdSearchSettings { RequiredTags = 1, SwitchPenalty = 0.1f, MinimumSwitchTime = 0.2f };
-				Assert.That(MotionSearch.Find(ref data.Value.Value, query, settings, 4), Is.EqualTo(11));
-				Assert.That(MotionSearch.Find(ref data.Value.Value, query, settings, 4, 1f, 0.45f), Is.EqualTo(4));
+				var settings = new MmdSearchSettings { SwitchPenalty = 0.1f, MinimumSwitchTime = 0.2f };
+				Assert.That(MotionSearch.Find(ref data.Value.Value, query, settings, SelectGroups(manager, actor, requiredGroup, excludedGroup), 4), Is.EqualTo(11));
+				Assert.That(MotionSearch.Find(ref data.Value.Value, query, settings, SelectGroups(manager, actor, requiredGroup, excludedGroup), 4, 1f, 0.45f), Is.EqualTo(4));
 			}
 		}
 
 		[Test]
-		public void TransitionHoldStillAcceptsInitialSearchAndTagChangesImmediately() {
+		public void TransitionHoldStillAcceptsInitialSearchAndGroupChangesImmediately() {
+			int requiredGroup = 0;
+			int excludedGroup = 0;
 			using (var sample = new MmdSampleWorld(0.05f)) {
 				var actor = sample.Characters.Create(MotionDatabaseBuilder.Build(MotionDatabaseFixture.Create()), false, LocalTransform.Identity);
 				var manager = sample.World.EntityManager;
 				var settings = manager.GetComponentData<MmdSearchSettings>(actor);
-				settings.RequiredTags = 2;
+				requiredGroup = 2;
 				settings.MinimumTransitionTime = 0.2f;
+				SelectGroups(manager, actor, requiredGroup, excludedGroup);
 				manager.SetComponentData(actor, settings);
 				sample.Tick();
 				Assert.That(manager.GetComponentData<MmdPlayback>(actor).ClipIndex, Is.EqualTo(1));
@@ -197,7 +212,8 @@ namespace ColInt.MMD.Tests {
 				manager.SetComponentData(actor, playback);
 				sample.Tick();
 				Assert.That(manager.GetComponentData<MmdPlayback>(actor).Revision, Is.EqualTo(revision));
-				settings.RequiredTags = 1;
+				requiredGroup = 1;
+				SelectGroups(manager, actor, requiredGroup, excludedGroup);
 				manager.SetComponentData(actor, settings);
 				playback = manager.GetComponentData<MmdPlayback>(actor);
 				playback.SearchCountdown = 0f;
@@ -209,6 +225,8 @@ namespace ColInt.MMD.Tests {
 
 		[Test]
 		public void DirectionWeightPreservesRequestedPathEvenWhenFacingDiffers() {
+			int requiredGroup = 0;
+			int excludedGroup = 0;
 			var source = MotionDatabaseFixture.Create();
 			for (int frame = 0; frame < 22; frame++) {
 				bool lateral = frame < 11;
@@ -234,13 +252,13 @@ namespace ColInt.MMD.Tests {
 				var query = manager.GetBuffer<MmdSearchQueryElement>(actor);
 				LocomotionSchema.WriteTrajectory(query, new float3(0f, 0f, 1f), 0f);
 				var settings = new MmdSearchSettings { SwitchPenalty = 0.1f };
-				Assert.That(MotionSearch.Find(ref data.Value.Value, query, settings, 4), Is.EqualTo(4));
+				Assert.That(MotionSearch.Find(ref data.Value.Value, query, settings, SelectGroups(manager, actor, requiredGroup, excludedGroup), 4), Is.EqualTo(4));
 				settings.TrajectoryDirectionWeight = 4f;
-				int selected = MotionSearch.Find(ref data.Value.Value, query, settings, 4);
+				int selected = MotionSearch.Find(ref data.Value.Value, query, settings, SelectGroups(manager, actor, requiredGroup, excludedGroup), 4);
 				Assert.That(source.Frames[selected].ClipIndex, Is.EqualTo(1));
 				query[10] = new MmdSearchQueryElement { Value = 1f };
 				query[11] = new MmdSearchQueryElement { Value = 0f };
-				selected = MotionSearch.Find(ref data.Value.Value, query, settings, 4);
+				selected = MotionSearch.Find(ref data.Value.Value, query, settings, SelectGroups(manager, actor, requiredGroup, excludedGroup), 4);
 				Assert.That(source.Frames[selected].ClipIndex, Is.EqualTo(1),
 					"Turning and wall sliding must still match the resolved movement path independently of facing.");
 			}
@@ -250,12 +268,14 @@ namespace ColInt.MMD.Tests {
 		[TestCase(true, false, false)]
 		[TestCase(false, true, false)]
 		public void SettledOneShotYieldsToIdleButRetainsAnUnfinishedRecoveryStep(bool movingFoot, bool futureStep, bool finish) {
+			int requiredGroup = 1;
+			int excludedGroup = 0;
 			var source = MotionDatabaseFixture.Create();
 			for (int clip = 0; clip < source.Clips.Length; clip++) {
 				var value = source.Clips[clip];
 				value.Loop = clip == 2;
 				value.ActionId = 0;
-				value.Tags = clip == 2 ? 5u : 1u;
+				value.Groups = clip == 2 ? new[] { 1, 4 } : new[] { 1 };
 				source.Clips[clip] = value;
 			}
 			for (int frame = 0; frame < source.Frames.Length; frame++) {
@@ -278,29 +298,31 @@ namespace ColInt.MMD.Tests {
 				var data = manager.GetComponentData<MmdDatabase>(actor);
 				var query = manager.GetBuffer<MmdSearchQueryElement>(actor);
 				LocomotionSchema.WriteTrajectory(query, float3.zero, 0f);
-				var settings = new MmdSearchSettings { RequiredTags = 1, SwitchPenalty = 100f, MinimumRemainingTime = 0.2f };
-				int frame = MotionSearch.Find(ref data.Value.Value, query, settings, 4);
+				var settings = new MmdSearchSettings { SwitchPenalty = 100f, MinimumRemainingTime = 0.2f };
+				int frame = MotionSearch.Find(ref data.Value.Value, query, settings, SelectGroups(manager, actor, requiredGroup, excludedGroup), 4);
 				Assert.That(source.Frames[frame].ClipIndex, Is.EqualTo(finish ? 2 : 0));
-				settings.ExcludedTags = 4;
-				Assert.That(MotionSearch.Find(ref data.Value.Value, query, settings, 4), Is.EqualTo(4), "A one-shot stays playable without an eligible idle loop.");
+				excludedGroup = 4;
+				Assert.That(MotionSearch.Find(ref data.Value.Value, query, settings, SelectGroups(manager, actor, requiredGroup, excludedGroup), 4), Is.EqualTo(4), "A one-shot stays playable without an eligible idle loop.");
 			}
 		}
 
 		[TestCase(7)]
 		[TestCase(15)]
 		public void StationaryStopTailCannotRestartInsteadOfEligibleLoop(int tail) {
+			int requiredGroup = 1;
+			int excludedGroup = 0;
 			var source = MotionDatabaseFixture.Create();
 			var stop = source.Clips[0];
 			stop.Loop = false;
 			source.Clips[0] = stop;
 			var otherStop = source.Clips[1];
 			otherStop.Loop = false;
-			otherStop.Tags = 1;
+			otherStop.Groups = new[] { 1 };
 			source.Clips[1] = otherStop;
 			var idle = source.Clips[2];
 			idle.Loop = true;
 			idle.ActionId = 0;
-			idle.Tags = 5;
+			idle.Groups = new[] { 1, 4 };
 			source.Clips[2] = idle;
 			for (int frame = 0; frame < source.Frames.Length; frame++) {
 				for (int feature = 0; feature < source.FeatureCount; feature++) {
@@ -316,21 +338,21 @@ namespace ColInt.MMD.Tests {
 				var query = manager.GetBuffer<MmdSearchQueryElement>(actor);
 				query[15] = new MmdSearchQueryElement { Value = 0f };
 				LocomotionSchema.WriteTrajectory(query, float3.zero, 0f);
-				var settings = new MmdSearchSettings { RequiredTags = 1, MinimumRemainingTime = 0.2f };
-				int frame = MotionSearch.Find(ref data.Value.Value, query, settings, 9);
+				var settings = new MmdSearchSettings { MinimumRemainingTime = 0.2f };
+				int frame = MotionSearch.Find(ref data.Value.Value, query, settings, SelectGroups(manager, actor, requiredGroup, excludedGroup), 9);
 				Assert.That(source.Frames[frame].ClipIndex, Is.EqualTo(2));
-				Assert.That(MotionSearch.Find(ref data.Value.Value, query, settings, tail), Is.EqualTo(tail));
+				Assert.That(MotionSearch.Find(ref data.Value.Value, query, settings, SelectGroups(manager, actor, requiredGroup, excludedGroup), tail), Is.EqualTo(tail));
 
 				// A real new movement request can still select a non-looping transition.
 				LocomotionSchema.WriteTrajectory(query, new float3(0f, 0f, 1f), 0f);
-				Assert.That(MotionSearch.Find(ref data.Value.Value, query, settings, 9), Is.EqualTo(tail));
+				Assert.That(MotionSearch.Find(ref data.Value.Value, query, settings, SelectGroups(manager, actor, requiredGroup, excludedGroup), 9), Is.EqualTo(tail));
 				LocomotionSchema.WriteTrajectory(query, float3.zero, 1f);
-				Assert.That(MotionSearch.Find(ref data.Value.Value, query, settings, 9), Is.EqualTo(tail));
+				Assert.That(MotionSearch.Find(ref data.Value.Value, query, settings, SelectGroups(manager, actor, requiredGroup, excludedGroup), 9), Is.EqualTo(tail));
 
 				// A group containing only one-shots remains searchable.
 				LocomotionSchema.WriteTrajectory(query, float3.zero, 0f);
-				settings.ExcludedTags = 4;
-				Assert.That(MotionSearch.Find(ref data.Value.Value, query, settings, 9), Is.EqualTo(tail));
+				excludedGroup = 4;
+				Assert.That(MotionSearch.Find(ref data.Value.Value, query, settings, SelectGroups(manager, actor, requiredGroup, excludedGroup), 9), Is.EqualTo(tail));
 			}
 		}
 
@@ -339,12 +361,14 @@ namespace ColInt.MMD.Tests {
 		[TestCase(true, 0f)]
 		[TestCase(true, -1.7f)]
 		public void StationaryActionHandoffAndIdleDoNotSelectMovingStopForItsFootPose(bool leavingAction, float verticalSpeed) {
+			int requiredGroup = 1;
+			int excludedGroup = 0;
 			var source = MotionDatabaseFixture.Create();
 			for (int clip = 0; clip < source.Clips.Length; clip++) {
 				var value = source.Clips[clip];
 				value.Loop = clip == 0;
 				value.ActionId = clip == 2 ? 7 : 0;
-				value.Tags = 1;
+				value.Groups = new[] { 1 };
 				source.Clips[clip] = value;
 			}
 			for (int frame = 0; frame < source.Frames.Length; frame++) {
@@ -365,12 +389,12 @@ namespace ColInt.MMD.Tests {
 				LocomotionSchema.WriteTrajectory(query, float3.zero, 0f);
 				query[13] = new MmdSearchQueryElement { Value = verticalSpeed };
 				query[15] = default;
-				var settings = new MmdSearchSettings { RequiredTags = 1, MinimumRemainingTime = 0.2f };
+				var settings = new MmdSearchSettings { MinimumRemainingTime = 0.2f };
 				int continuation = leavingAction ? 24 : 4;
-				int selected = MotionSearch.Find(ref data.Value.Value, query, settings, continuation);
+				int selected = MotionSearch.Find(ref data.Value.Value, query, settings, SelectGroups(manager, actor, requiredGroup, excludedGroup), continuation);
 				Assert.That(source.Frames[selected].ClipIndex, Is.Zero);
 				LocomotionSchema.WriteTrajectory(query, new float3(0f, 0f, 1f), 0f);
-				selected = MotionSearch.Find(ref data.Value.Value, query, settings, continuation);
+				selected = MotionSearch.Find(ref data.Value.Value, query, settings, SelectGroups(manager, actor, requiredGroup, excludedGroup), continuation);
 				Assert.That(source.Frames[selected].ClipIndex, Is.EqualTo(1), "Renewed movement must allow a non-looping transition.");
 			}
 		}
@@ -379,6 +403,8 @@ namespace ColInt.MMD.Tests {
 		[TestCase(9, 0, -1)]
 		[TestCase(5, 6, 2)]
 		public void NearbyFramesCannotRestartTheSameStepIncludingAcrossLoopSeam(int continuation, int nearby, int distant) {
+			int requiredGroup = 1;
+			int excludedGroup = 0;
 			var source = MotionDatabaseFixture.Create();
 			for (int frame = 0; frame < source.Frames.Length; frame++) {
 				source.Features[frame * source.FeatureCount] = 10f;
@@ -394,18 +420,20 @@ namespace ColInt.MMD.Tests {
 				var data = manager.GetComponentData<MmdDatabase>(entity);
 				var query = manager.GetBuffer<MmdSearchQueryElement>(entity);
 				query[0] = new MmdSearchQueryElement { Value = 0f };
-				var settings = new MmdSearchSettings { RequiredTags = 1, MinimumSwitchTime = 0.2f };
-				Assert.That(MotionSearch.Find(ref data.Value.Value, query, settings, continuation), Is.EqualTo(distant >= 0 ? distant : continuation));
+				var settings = new MmdSearchSettings { MinimumSwitchTime = 0.2f };
+				Assert.That(MotionSearch.Find(ref data.Value.Value, query, settings, SelectGroups(manager, entity, requiredGroup, excludedGroup), continuation), Is.EqualTo(distant >= 0 ? distant : continuation));
 				settings.MinimumSwitchTime = 0f;
-				Assert.That(MotionSearch.Find(ref data.Value.Value, query, settings, continuation), Is.EqualTo(nearby));
+				Assert.That(MotionSearch.Find(ref data.Value.Value, query, settings, SelectGroups(manager, entity, requiredGroup, excludedGroup), continuation), Is.EqualTo(nearby));
 			}
 		}
 
 		[Test]
 		public void ReducedTempoComparesCandidateTrajectoryAndVelocitiesAtActualPlaybackSpeed() {
+			int requiredGroup = 2;
+			int excludedGroup = 0;
 			var source = MotionDatabaseFixture.Create();
 			var slower = source.Clips[0];
-			slower.Tags = 2;
+			slower.Groups = new[] { 2 };
 			source.Clips[0] = slower;
 			for (int frame = 0; frame < slower.FrameCount; frame++) {
 				for (int point = 0; point < 3; point++) {
@@ -419,25 +447,29 @@ namespace ColInt.MMD.Tests {
 				var data = manager.GetComponentData<MmdDatabase>(actor);
 				var query = manager.GetBuffer<MmdSearchQueryElement>(actor);
 				LocomotionSchema.WriteTrajectory(query, new float3(0f, 0f, 0.5f), 0f);
-				var settings = new MmdSearchSettings { RequiredTags = 2 };
-				int unscaled = MotionSearch.Find(ref data.Value.Value, query, settings, -1);
-				int scaled = MotionSearch.Find(ref data.Value.Value, query, settings, -1, 0.5f);
+				var settings = new MmdSearchSettings();
+				int unscaled = MotionSearch.Find(ref data.Value.Value, query, settings, SelectGroups(manager, actor, requiredGroup, excludedGroup), -1);
+				int scaled = MotionSearch.Find(ref data.Value.Value, query, settings, SelectGroups(manager, actor, requiredGroup, excludedGroup), -1, 0.5f);
 				Assert.That(source.Frames[unscaled].ClipIndex, Is.EqualTo(0));
 				Assert.That(source.Frames[scaled].ClipIndex, Is.EqualTo(1));
 			}
 		}
 
 		[Test]
-		public void TagsExcludeIneligibleClipAndReportNoCandidate() {
+		public void GroupsExcludeIneligibleClipAndReportNoCandidate() {
+			int requiredGroup = 0;
+			int excludedGroup = 0;
 			using (var world = new MmdSampleWorld(0.1f)) {
 				var entity = world.Characters.Create(MotionDatabaseBuilder.Build(MotionDatabaseFixture.Create()), false, LocalTransform.Identity);
 				var manager = world.World.EntityManager;
 				var settings = manager.GetComponentData<MmdSearchSettings>(entity);
-				settings.RequiredTags = 2;
+				requiredGroup = 2;
+				SelectGroups(manager, entity, requiredGroup, excludedGroup);
 				manager.SetComponentData(entity, settings);
 				world.Tick();
 				Assert.That(manager.GetComponentData<MmdPlayback>(entity).ClipIndex, Is.EqualTo(1));
-				settings.ExcludedTags = 2;
+				excludedGroup = 2;
+				SelectGroups(manager, entity, requiredGroup, excludedGroup);
 				manager.SetComponentData(entity, settings);
 				world.Tick();
 				Assert.That(manager.GetComponentData<MmdFault>(entity).Code, Is.EqualTo(MmdFaultCode.NoCandidate));
@@ -492,6 +524,13 @@ namespace ColInt.MMD.Tests {
 					new float3(1f, 0.5f, 3f)), Is.LessThan(0.0001f));
 			}
 		}
+		private static DynamicBuffer<MmdMotionGroup> SelectGroups(EntityManager manager, Entity entity, int required, int excluded) {
+			var groups = manager.GetBuffer<MmdMotionGroup>(entity);
+			MmdMotionGroups.Set(groups, MmdMotionGroupUsage.Required, required);
+			MmdMotionGroups.Set(groups, MmdMotionGroupUsage.Excluded, excluded);
+			return groups;
+		}
+
 	}
 
 }

@@ -5,10 +5,10 @@ namespace ColInt.MMD.Samples.Character.Movement.CrouchState.Components {
 		public float Speed;
 		public float AnimationSpeed;
 		public float TransitionDuration;
-		public uint IdleTags;
-		public uint MoveTags;
-		public uint TurnTags;
-		public uint StartTags;
+		public int IdleGroup;
+		public int MoveGroup;
+		public int TurnGroup;
+		public int StartGroup;
 		public int EnterAction;
 		public int ExitAction;
 	}

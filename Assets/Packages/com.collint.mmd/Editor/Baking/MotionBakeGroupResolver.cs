@@ -9,8 +9,8 @@ using UnityEngine;
 namespace ColInt.MMD.Editor.Baking {
 	public static class MotionBakeGroupResolver {
 		public static MotionBakeSelection Resolve(MotionBakeGroup[] groups) {
-			if (groups == null || groups.Length > 32) {
-				throw new ArgumentException("A database supports up to 32 named groups.");
+			if (groups == null) {
+				throw new ArgumentException("An animation group list is required.");
 			}
 			var names = new HashSet<string>(StringComparer.Ordinal);
 			var clips = new List<MotionBakeClip>();
@@ -23,9 +23,9 @@ namespace ColInt.MMD.Editor.Baking {
 					(group.Playback != MotionBakeGroupPlayback.MotionMatching && group.Playback != MotionBakeGroupPlayback.Action)) {
 					throw new ArgumentException("Groups need unique names without surrounding whitespace (up to 61 UTF-8 bytes), a clip list and a valid playback mode.");
 				}
-				uint tags = 1u << index;
+				int id = index + 1;
 				int action = group.Playback == MotionBakeGroupPlayback.Action ? index + 1 : 0;
-				metadata[index] = new MotionGroup { Name = new FixedString64Bytes(group.Name), Tags = tags, ActionId = action };
+				metadata[index] = new MotionGroup { Name = new FixedString64Bytes(group.Name), Id = id, ActionId = action };
 				foreach (AnimationClip clip in group.Clips) {
 					if (clip == null || clip.length <= 0f) {
 						throw new ArgumentException($"Group '{group.Name}' contains a missing or empty animation.");
@@ -38,10 +38,14 @@ namespace ColInt.MMD.Editor.Baking {
 						if (clips[existing].ActionId != action) {
 							throw new ArgumentException($"Clip '{clip.name}' cannot belong to different actions or to both Motion Matching and an action.");
 						}
-						clips[existing].Tags |= tags;
+						var memberships = new List<int>(clips[existing].Groups);
+						if (!memberships.Contains(id)) {
+							memberships.Add(id);
+						}
+						clips[existing].Groups = memberships.ToArray();
 					} else {
 						indices.Add(clip, clips.Count);
-						clips.Add(new MotionBakeClip { Clip = clip, Loop = loop, Tags = tags, ActionId = action });
+						clips.Add(new MotionBakeClip { Clip = clip, Loop = loop, Groups = new[] { id }, ActionId = action });
 					}
 				}
 			}

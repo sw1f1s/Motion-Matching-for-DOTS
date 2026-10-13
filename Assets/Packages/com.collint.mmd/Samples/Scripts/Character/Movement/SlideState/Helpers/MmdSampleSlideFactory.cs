@@ -30,7 +30,7 @@ namespace ColInt.MMD.Samples.Character.Movement.SlideState.Helpers {
 			int loops = 0;
 			for (int clip = 0; clip < database.Value.Clips.Length; clip++) {
 				ref var candidate = ref database.Value.Clips[clip];
-				if ((candidate.Tags & motion.Tags) == 0) {
+				if (!MotionDatabaseGroups.Contains(ref database.Value, candidate, motion.Id)) {
 					continue;
 				}
 				if (candidate.Loop) {
@@ -44,7 +44,7 @@ namespace ColInt.MMD.Samples.Character.Movement.SlideState.Helpers {
 			}
 			manager.AddComponentData(entity, new MmdSampleSlide {
 				MinimumEntrySpeed = source.MinimumEntrySpeed, Deceleration = source.Deceleration, StopSpeed = source.StopSpeed, MaximumSpeed = source.MaximumSpeed,
-				SteeringSpeed = source.SteeringSpeed, MinimumDownhillNormalY = math.cos(math.radians(source.MinimumDownhillAngle)), EnterAction = enter.ActionId, MotionTags = motion.Tags
+				SteeringSpeed = source.SteeringSpeed, MinimumDownhillNormalY = math.cos(math.radians(source.MinimumDownhillAngle)), EnterAction = enter.ActionId, MotionGroup = motion.Id
 			});
 			manager.AddComponent<MmdSampleSlideProgress>(entity);
 		}

@@ -57,7 +57,7 @@ namespace ColInt.MMD.Tests {
 				_sample.SetInput(new MmdSampleInput { Run = true, Sprint = true, Movement = direction });
 				_sample.Tick();
 				var playback = manager.GetComponentData<MmdPlayback>(_character);
-				Assert.That(data.Value.Clips[playback.ClipIndex].Tags & control.StartTags, Is.Zero, "Moving sprint turns must not splice stationary reface starts.");
+				Assert.That(MotionDatabaseGroups.Contains(ref data.Value, data.Value.Clips[playback.ClipIndex], control.StartGroup), Is.False, "Moving sprint turns must not splice stationary reface starts.");
 				var poses = manager.GetBuffer<MmdLocalPose>(_character);
 				// UEFN knees flex around local Z. Authored sprint pivots contain up to
 				// 21 degrees of lateral swing; retain headroom for continuous blending.
@@ -69,7 +69,7 @@ namespace ColInt.MMD.Tests {
 			Advance(180);
 			var settled = manager.GetComponentData<MmdPlayback>(_character);
 			Assert.That(data.Value.Clips[settled.ClipIndex].Loop, Is.True, "An aligned sprint must return to its stride.");
-			Assert.That(data.Value.Clips[settled.ClipIndex].Tags & control.SprintTags, Is.EqualTo(control.SprintTags));
+			Assert.That(MotionDatabaseGroups.Contains(ref data.Value, data.Value.Clips[settled.ClipIndex], control.SprintGroup), Is.True);
 		}
 
 		[TestCase(-1f)]
@@ -83,7 +83,7 @@ namespace ColInt.MMD.Tests {
 			var data = manager.GetComponentData<MmdDatabase>(_character).Value;
 			var control = manager.GetComponentData<MmdSampleCharacterControl>(_character);
 			var playback = manager.GetComponentData<MmdPlayback>(_character);
-			Assert.That(data.Value.Clips[playback.ClipIndex].Tags & control.StartTags, Is.EqualTo(control.StartTags));
+			Assert.That(MotionDatabaseGroups.Contains(ref data.Value, data.Value.Clips[playback.ClipIndex], control.StartGroup), Is.True);
 			Advance(180);
 			playback = manager.GetComponentData<MmdPlayback>(_character);
 			Assert.That(data.Value.Clips[playback.ClipIndex].Loop, Is.True);

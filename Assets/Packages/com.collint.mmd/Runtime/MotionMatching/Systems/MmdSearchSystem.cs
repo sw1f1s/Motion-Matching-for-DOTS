@@ -24,15 +24,15 @@ namespace ColInt.MMD.MotionMatching.Systems {
 			if (SystemAPI.GetSingleton<MmdWorldState>().IsPaused) {
 				return;
 			}
-			state.Dependency = new SearchJob { DeltaTime = SystemAPI.Time.DeltaTime }.ScheduleParallel(state.Dependency);
+			state.Dependency = new MotionSearchJob { DeltaTime = SystemAPI.Time.DeltaTime }.ScheduleParallel(state.Dependency);
 		}
 
 		[BurstCompile]
-		private partial struct SearchJob : IJobEntity {
+		private partial struct MotionSearchJob : IJobEntity {
 			public float DeltaTime;
 
 			private void Execute(in MmdDatabase data, in MmdSearchSettings settings, in MmdActionState action,
-				in DynamicBuffer<MmdSearchQueryElement> query, ref MmdPlayback playback, ref MmdFault fault) {
+				in DynamicBuffer<MmdSearchQueryElement> query, in DynamicBuffer<MmdMotionGroup> groups, ref MmdPlayback playback, ref MmdFault fault) {
 				if (action.ActionId != 0) {
 					return;
 				}
@@ -55,14 +55,14 @@ namespace ColInt.MMD.MotionMatching.Systems {
 				int continuation = MmdAnimationMath.FrameAt(ref database, playback.ClipIndex, playback.Time);
 				ref var currentClip = ref database.Clips[playback.ClipIndex];
 				if (playback.MatchedFrame >= 0 && playback.TransitionElapsed < settings.MinimumTransitionTime && currentClip.ActionId == 0 &&
-					(currentClip.Tags & settings.RequiredTags) == settings.RequiredTags && (currentClip.Tags & settings.ExcludedTags) == 0 &&
+					MmdMotionGroups.Matches(ref database, currentClip, groups) &&
 					(currentClip.Loop || currentClip.Duration - playback.Time >= settings.MinimumRemainingTime)) {
 					fault.Code = MmdFaultCode.None;
 					// Let the displayed pose settle before comparing its next foot phase.
 					// Input changes can explicitly interrupt; tag changes and clip endpoints bypass this hold.
 					return;
 				}
-				int frame = MotionSearch.Find(ref database, query, settings, continuation, playback.Speed, playback.Time);
+				int frame = MotionSearch.Find(ref database, query, settings, groups, continuation, playback.Speed, playback.Time);
 				playback.SearchCountdown = settings.Interval;
 				if (frame < 0) {
 					fault.Code = MmdFaultCode.NoCandidate;

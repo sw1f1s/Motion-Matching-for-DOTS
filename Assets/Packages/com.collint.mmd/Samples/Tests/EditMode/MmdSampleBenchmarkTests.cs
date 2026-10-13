@@ -1,3 +1,6 @@
+using ColInt.MMD.MotionMatching.Helpers;
+using ColInt.MMD.MotionMatching.Data;
+using ColInt.MMD.Database.Helpers;
 using ColInt.MMD.Actions.Components;
 using ColInt.MMD.Lifecycle.Components;
 using ColInt.MMD.MotionMatching.Components;
@@ -92,9 +95,9 @@ namespace ColInt.MMD.Tests {
 				Assert.That(manager.GetBuffer<MmdSearchQueryElement>(left)[8].Value, Is.LessThan(0f));
 				Assert.That(manager.GetBuffer<MmdSearchQueryElement>(player)[8].Value, Is.Zero.Within(0.00001f));
 				Assert.That(manager.GetBuffer<MmdSearchQueryElement>(player)[9].Value, Is.GreaterThan(0f));
-				Assert.That(manager.GetComponentData<MmdSearchSettings>(right).RequiredTags, Is.EqualTo(4u));
-				Assert.That(manager.GetComponentData<MmdSearchSettings>(left).RequiredTags, Is.EqualTo(4u));
-				Assert.That(manager.GetComponentData<MmdSearchSettings>(player).RequiredTags, Is.EqualTo(2u));
+				Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(right), MmdMotionGroupUsage.Required), Is.EqualTo(4));
+				Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(left), MmdMotionGroupUsage.Required), Is.EqualTo(4));
+				Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(player), MmdMotionGroupUsage.Required), Is.EqualTo(2));
 			}
 		}
 
@@ -110,7 +113,7 @@ namespace ColInt.MMD.Tests {
 			var manager = sample.World.EntityManager;
 			manager.AddComponent<MmdSampleMovement>(entity);
 			manager.AddComponentData(entity, new MmdActionRequest { PreferredClip = -1 });
-			manager.AddComponentData(entity, new MmdSampleCharacterControl { WalkSpeed = 2f, RunSpeed = 5f, TurnSpeed = 4.5f, IdleTags = 1, WalkTags = 2, RunTags = 4 });
+			manager.AddComponentData(entity, new MmdSampleCharacterControl { WalkSpeed = 2f, RunSpeed = 5f, TurnSpeed = 4.5f, IdleGroup = 1, WalkGroup = 2, RunGroup = 4 });
 			manager.AddComponent<MmdSearchSettings>(entity);
 			manager.AddComponentData(entity, new MmdPlayback { Speed = 1f });
 			return entity;

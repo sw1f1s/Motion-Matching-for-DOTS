@@ -326,8 +326,8 @@ namespace ColInt.MMD.Tests {
 
 				if (tick > releaseTick && !manager.HasComponent<MmdSampleTraversalActive>(_character) && manager.HasComponent<MmdSampleState<MmdSampleLocomotion>>(_character)) {
 					settled = true;
-					uint idle = manager.GetComponentData<ColInt.MMD.Samples.Character.Components.MmdSampleCharacterControl>(_character).IdleTags;
-					Assert.That(database.Value.Clips[playback.ClipIndex].Tags & idle, Is.EqualTo(idle));
+					int idle = manager.GetComponentData<ColInt.MMD.Samples.Character.Components.MmdSampleCharacterControl>(_character).IdleGroup;
+					Assert.That(MotionDatabaseGroups.Contains(ref database.Value, database.Value.Clips[playback.ClipIndex], idle), Is.True);
 					Assert.That(action.ActionId, Is.Zero);
 					Assert.That(database.Value.Clips[playback.ClipIndex].Loop, Is.True, "Stopped traversal must settle into looping Idle.");
 					Assert.That(math.distance(position.xz, target.End.xz), Is.LessThan(0.15f));
@@ -398,8 +398,8 @@ namespace ColInt.MMD.Tests {
 					Assert.That(manager.GetComponentData<PhysicsVelocity>(_character).Linear.z, Is.GreaterThan(3f), "Consuming the last fraction of the traversal must not reset running speed.");
 					var database = manager.GetComponentData<MmdDatabase>(_character).Value;
 					var control = manager.GetComponentData<ColInt.MMD.Samples.Character.Components.MmdSampleCharacterControl>(_character);
-					Assert.That(database.Value.Clips[playback.ClipIndex].Tags & control.RunTags, Is.EqualTo(control.RunTags));
-					Assert.That(database.Value.Clips[playback.ClipIndex].Tags & control.StartTags, Is.Zero);
+					Assert.That(MotionDatabaseGroups.Contains(ref database.Value, database.Value.Clips[playback.ClipIndex], control.RunGroup), Is.True);
+					Assert.That(MotionDatabaseGroups.Contains(ref database.Value, database.Value.Clips[playback.ClipIndex], control.StartGroup), Is.False);
 					Assert.That(database.Value.Clips[playback.ClipIndex].Loop, Is.True, "A moving action handoff must not enter a gait transition or pivot.");
 				}
 			}
@@ -433,12 +433,12 @@ namespace ColInt.MMD.Tests {
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleLocomotion>>(_character), Is.True);
 			float3 start = manager.GetComponentData<LocalTransform>(_character).Position;
 			var control = manager.GetComponentData<ColInt.MMD.Samples.Character.Components.MmdSampleCharacterControl>(_character);
-			uint gait = runAfterClimb ? control.RunTags : control.WalkTags;
+			int gait = runAfterClimb ? control.RunGroup : control.WalkGroup;
 			for (int tick = 0; tick < 6; tick++) {
 				var current = manager.GetComponentData<MmdPlayback>(_character);
 				var database = manager.GetComponentData<MmdDatabase>(_character).Value;
-				Assert.That(database.Value.Clips[current.ClipIndex].Tags & gait, Is.EqualTo(gait), "The first locomotion tick must select the held gait, without an intermediate stop.");
-				Assert.That(database.Value.Clips[current.ClipIndex].Tags & control.StartTags, Is.Zero, "A running exit must not restart from rest.");
+				Assert.That(MotionDatabaseGroups.Contains(ref database.Value, database.Value.Clips[current.ClipIndex], gait), Is.True, "The first locomotion tick must select the held gait, without an intermediate stop.");
+				Assert.That(MotionDatabaseGroups.Contains(ref database.Value, database.Value.Clips[current.ClipIndex], control.StartGroup), Is.False, "A running exit must not restart from rest.");
 				Assert.That(manager.GetComponentData<PhysicsVelocity>(_character).Linear.z, Is.GreaterThan(1f), "The handoff must retain forward momentum.");
 				_sample.Tick();
 			}
@@ -446,7 +446,7 @@ namespace ColInt.MMD.Tests {
 			var position = manager.GetComponentData<LocalTransform>(_character).Position;
 			var playback = manager.GetComponentData<MmdPlayback>(_character);
 			var data = manager.GetComponentData<MmdDatabase>(_character).Value;
-			Assert.That(data.Value.Clips[playback.ClipIndex].Tags & gait, Is.EqualTo(gait));
+			Assert.That(MotionDatabaseGroups.Contains(ref data.Value, data.Value.Clips[playback.ClipIndex], gait), Is.True);
 			Assert.That(position.z - start.z, Is.GreaterThan(0.1f));
 			Assert.That(position.y, Is.EqualTo(1.4f).Within(0.08f));
 		}

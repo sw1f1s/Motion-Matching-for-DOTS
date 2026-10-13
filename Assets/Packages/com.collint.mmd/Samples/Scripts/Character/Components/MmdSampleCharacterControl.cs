@@ -6,11 +6,11 @@ namespace ColInt.MMD.Samples.Character.Components {
 		public float RunSpeed;
 		public float SprintSpeed;
 		public float TurnSpeed;
-		public uint IdleTags;
-		public uint WalkTags;
-		public uint RunTags;
-		public uint SprintTags;
-		public uint TurnTags;
-		public uint StartTags;
+		public int IdleGroup;
+		public int WalkGroup;
+		public int RunGroup;
+		public int SprintGroup;
+		public int TurnGroup;
+		public int StartGroup;
 	}
 }

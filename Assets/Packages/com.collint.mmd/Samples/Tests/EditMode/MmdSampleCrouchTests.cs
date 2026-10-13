@@ -161,7 +161,8 @@ namespace ColInt.MMD.Tests {
 				var database = manager.GetComponentData<MmdDatabase>(_character).Value;
 				int clip = manager.GetComponentData<MmdPlayback>(_character).ClipIndex;
 				var crouch = manager.GetComponentData<MmdSampleCrouch>(_character);
-				Assert.That(database.Value.Clips[clip].Tags & (crouch.MoveTags | crouch.StartTags), Is.EqualTo(crouch.MoveTags | crouch.StartTags));
+				Assert.That(MotionDatabaseGroups.Contains(ref database.Value, database.Value.Clips[clip], crouch.MoveGroup), Is.True);
+				Assert.That(MotionDatabaseGroups.Contains(ref database.Value, database.Value.Clips[clip], crouch.StartGroup), Is.True);
 			}
 			Advance(210);
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleCrouch>>(_character), Is.True);
@@ -437,7 +438,7 @@ namespace ColInt.MMD.Tests {
 			var database = manager.GetComponentData<MmdDatabase>(_character).Value;
 			int clip = manager.GetComponentData<MmdPlayback>(_character).ClipIndex;
 			Assert.That(database.Value.Clips[clip].Loop, Is.True);
-			Assert.That(database.Value.Clips[clip].Tags & manager.GetComponentData<MmdSampleCrouch>(_character).IdleTags, Is.Not.Zero);
+			Assert.That(MotionDatabaseGroups.Contains(ref database.Value, database.Value.Clips[clip], manager.GetComponentData<MmdSampleCrouch>(_character).IdleGroup), Is.True);
 			float3 stoppedAt = manager.GetComponentData<LocalTransform>(_character).Position;
 			_sample.SetInput(new MmdSampleInput { Crouch = true, Movement = new float2(0f, 1f) });
 			Advance(30);

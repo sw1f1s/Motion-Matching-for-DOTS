@@ -1,3 +1,6 @@
+using ColInt.MMD.MotionMatching.Helpers;
+using ColInt.MMD.MotionMatching.Data;
+using ColInt.MMD.MotionMatching.Components;
 using ColInt.MMD.Actions.Components;
 using ColInt.MMD.Database.Components;
 using ColInt.MMD.Database.Helpers;
@@ -94,11 +97,11 @@ namespace ColInt.MMD.Tests {
 			}
 		}
 
-		[TestCase(0.2f, 2u)]
-		[TestCase(0f, 2u)]
-		[TestCase(0.2f, 0u)]
-		[TestCase(0.2f, 1u)]
-		public void SettledStopPreservesFootprintOnlyForConfiguredGroupsAndReleasesAlignmentOnMovement(float duration, uint stationaryTags) {
+		[TestCase(0.2f, 2)]
+		[TestCase(0f, 2)]
+		[TestCase(0.2f, 0)]
+		[TestCase(0.2f, 1)]
+		public void SettledStopPreservesFootprintOnlyForConfiguredGroupsAndReleasesAlignmentOnMovement(float duration, int stationaryGroup) {
 			var source = MotionDatabaseFixture.Create();
 			var stop = source.Clips[0];
 			stop.Loop = false;
@@ -117,7 +120,8 @@ namespace ColInt.MMD.Tests {
 			using (var sample = new MmdSampleWorld(1f / 60f)) {
 				var manager = sample.World.EntityManager;
 				Entity actor = sample.Characters.Create(MotionDatabaseBuilder.Build(source), true, LocalTransform.Identity);
-				manager.AddComponentData(actor, new MmdInertialization { PoseDuration = duration, RootDuration = 0.1f, StationaryPoseTags = stationaryTags });
+				manager.AddComponentData(actor, new MmdInertialization { PoseDuration = duration, RootDuration = 0.1f });
+				MmdMotionGroups.Set(manager.GetBuffer<MmdMotionGroup>(actor), MmdMotionGroupUsage.StationaryPose, stationaryGroup);
 				manager.AddComponent<MmdInertializationState>(actor);
 				manager.AddBuffer<MmdInertialPose>(actor);
 				manager.SetComponentData(actor, new MmdPlayback { Speed = 1f, SearchCountdown = 100f });
@@ -128,7 +132,7 @@ namespace ColInt.MMD.Tests {
 				for (int tick = 0; tick < 30; tick++) {
 					sample.Tick();
 				}
-				float expected = duration > 0f && (stationaryTags & source.Clips[1].Tags) != 0 ? 0.07f : 0f;
+				float expected = duration > 0f && System.Array.IndexOf(source.Clips[1].Groups, stationaryGroup) >= 0 ? 0.07f : 0f;
 				Assert.That(manager.GetBuffer<MmdLocalPose>(actor)[0].Value.Position.x, Is.EqualTo(expected).Within(0.00001f));
 				Assert.That(manager.GetComponentData<MmdInertializationState>(actor).StationaryPoseOffset.x, Is.EqualTo(expected).Within(0.00001f));
 				Assert.That(manager.GetComponentData<LocalTransform>(actor).Position, Is.EqualTo(float3.zero));
@@ -163,8 +167,9 @@ namespace ColInt.MMD.Tests {
 				var transform = LocalTransform.FromPositionRotation(new float3(2f, 0f, 3f), quaternion.RotateY(0.7f));
 				Entity actor = sample.Characters.Create(MotionDatabaseBuilder.Build(source), false, transform);
 				manager.AddComponentData(actor, new MmdInertialization {
-					PoseDuration = 0.2f, StationaryPoseDuration = stationaryDuration, RootDuration = 0.1f, StationaryPoseTags = source.Clips[1].Tags
+					PoseDuration = 0.2f, StationaryPoseDuration = stationaryDuration, RootDuration = 0.1f
 				});
+				MmdMotionGroups.Set(manager.GetBuffer<MmdMotionGroup>(actor), MmdMotionGroupUsage.StationaryPose, source.Clips[1].Groups[0]);
 				manager.AddComponent<MmdInertializationState>(actor);
 				manager.AddBuffer<MmdInertialPose>(actor);
 				manager.SetComponentData(actor, new MmdPlayback { Speed = 1f, MatchedFrame = -1, SearchCountdown = 100f });

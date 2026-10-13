@@ -1,3 +1,5 @@
+using ColInt.MMD.MotionMatching.Helpers;
+using ColInt.MMD.MotionMatching.Data;
 using ColInt.MMD.Samples.Character.Movement.LocomotionState.Helpers;
 using ColInt.MMD.Actions.Components;
 using ColInt.MMD.Database.Components;
@@ -43,7 +45,7 @@ namespace ColInt.MMD.Samples.Character.Movement.LocomotionState.Systems {
 
 			private void Execute(Entity entity, in MmdDatabase data, in MmdSampleFall fall, in MmdSampleCharacterControl control,
 				ref MmdSampleMovement movement, ref MmdSampleGroundState ground, ref MmdActionRequest request,
-				ref MmdSearchSettings settings, ref MmdPlayback playback, ref PhysicsVelocity velocity, ref MmdInertializationState smoothing) {
+				ref MmdSearchSettings settings, ref MmdPlayback playback, ref PhysicsVelocity velocity, ref MmdInertializationState smoothing, DynamicBuffer<MmdMotionGroup> groups) {
 				var input = CharacterInputs.HasComponent(entity) ? CharacterInputs[entity].Value : Input;
 				// The action has already completed its physical path. Released input must not
 				// inherit the source clip's running speed and select another moving stop.
@@ -57,12 +59,12 @@ namespace ColInt.MMD.Samples.Character.Movement.LocomotionState.Systems {
 				movement = default;
 				ground.MaximumDownwardSpeed = 0f;
 				MmdSampleAnimationRequest.Cancel(ref request);
-				settings.RequiredTags = control.IdleTags;
-				settings.ExcludedTags = fall.Tags;
+				MmdMotionGroups.Set(groups, MmdMotionGroupUsage.Required, control.IdleGroup);
+				MmdMotionGroups.Set(groups, MmdMotionGroupUsage.Excluded, fall.Group);
 				settings.PreferLoop = false;
 				if (math.lengthsq(input.Movement) > 0f && math.lengthsq(velocity.Linear.xz) > math.square(control.WalkSpeed * 0.3f)) {
 					// Resume the commanded gait directly when the action already exits in motion.
-					settings.RequiredTags = MmdSampleGait.Tags(control, input);
+					MmdMotionGroups.Set(groups, MmdMotionGroupUsage.Required, MmdSampleGait.Group(control, input));
 				}
 				playback.SearchCountdown = 0f;
 				playback.TransitionElapsed = settings.MinimumTransitionTime;

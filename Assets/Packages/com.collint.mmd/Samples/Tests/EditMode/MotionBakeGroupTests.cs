@@ -19,7 +19,7 @@ namespace ColInt.MMD.Tests {
 				};
 				var result = MotionBakeGroupResolver.Resolve(groups);
 				Assert.That(result.Clips.Length, Is.EqualTo(1));
-				Assert.That(result.Clips[0].Tags, Is.EqualTo(3u));
+				Assert.That(result.Clips[0].Groups, Is.EqualTo(new[] { 1, 2 }));
 				Assert.That(result.Clips[0].Loop, Is.False);
 				var settings = AnimationUtility.GetAnimationClipSettings(clip);
 				settings.loopTime = true;
@@ -38,11 +38,24 @@ namespace ColInt.MMD.Tests {
 		}
 
 		[Test]
-		public void DuplicateNamesAndMoreThan32GroupsAreRejected() {
+		public void DuplicateGroupNamesAreRejected() {
 			Assert.Throws<ArgumentException>(() => MotionBakeGroupResolver.Resolve(new[] { new MotionBakeGroup { Name = "Run" }, new MotionBakeGroup { Name = "Run" } }));
-			var groups = Enumerable.Range(0, 33).Select(i => new MotionBakeGroup { Name = "Group " + i }).ToArray();
-			Assert.Throws<ArgumentException>(() => MotionBakeGroupResolver.Resolve(groups));
-			Assert.That(MotionBakeGroupResolver.Resolve(groups.Take(32).ToArray()).Groups.Last().Tags, Is.EqualTo(0x80000000u));
+		}
+
+		[TestCase(33)]
+		[TestCase(128)]
+		[TestCase(1000)]
+		public void ManyNamedGroupsCanShareOneClipWithoutLosingMembership(int count) {
+			AnimationClip clip = CreateClip();
+			try {
+				var groups = Enumerable.Range(1, count).Select(id => new MotionBakeGroup { Name = "Group " + id, Clips = new[] { clip } }).ToArray();
+				var selection = MotionBakeGroupResolver.Resolve(groups);
+				Assert.That(selection.Groups.Select(group => group.Id), Is.EqualTo(Enumerable.Range(1, count)));
+				Assert.That(selection.Clips.Length, Is.EqualTo(1));
+				Assert.That(selection.Clips[0].Groups, Is.EqualTo(Enumerable.Range(1, count)));
+			} finally {
+				UnityEngine.Object.DestroyImmediate(clip);
+			}
 		}
 
 		[Test]
@@ -74,11 +87,12 @@ namespace ColInt.MMD.Tests {
 		public void ReorderedGroupsAreResolvedByNameInsteadOfAnOldMask() {
 			var source = MotionDatabaseFixture.Create();
 			source.Groups = MotionBakeGroupResolver.Resolve(new[] { new MotionBakeGroup { Name = "Run" }, new MotionBakeGroup { Name = "Idle" } }).Groups;
+			source.Clips[2].Groups = Array.Empty<int>();
 			var database = MotionDatabaseBuilder.Build(source);
 			try {
-				Assert.That(MotionDatabaseGroups.GetTags(ref database.Value, new FixedString64Bytes("Idle")), Is.EqualTo(2u));
-				Assert.That(MotionDatabaseGroups.GetTags(ref database.Value, new FixedString64Bytes("Run")), Is.EqualTo(1u));
-				Assert.Throws<ArgumentException>(() => MotionDatabaseGroups.GetTags(ref database.Value, new FixedString64Bytes("Missing")));
+				Assert.That(MotionDatabaseGroups.GetId(ref database.Value, new FixedString64Bytes("Idle")), Is.EqualTo(2));
+				Assert.That(MotionDatabaseGroups.GetId(ref database.Value, new FixedString64Bytes("Run")), Is.EqualTo(1));
+				Assert.Throws<ArgumentException>(() => MotionDatabaseGroups.GetId(ref database.Value, new FixedString64Bytes("Missing")));
 				Assert.Throws<ArgumentException>(() => MotionDatabaseGroups.GetActionId(ref database.Value, new FixedString64Bytes("Run")));
 			} finally {
 				database.Dispose();
@@ -117,9 +131,9 @@ namespace ColInt.MMD.Tests {
 			Assert.That(selection.Clips.Count(c => c.ActionId != 0), Is.EqualTo(68));
 			Assert.That(selection.Clips.Single(c => c.Clip.name == "M_Neutral_Jump_Loop_Fall").Loop, Is.True);
 			Assert.That(selection.Clips.Count(c => c.Clip.name.Contains("Reface_Start")), Is.EqualTo(30));
-			Assert.That(selection.Clips.Single(c => c.Clip.name == "M_Neutral_Walk_Reface_Start_F_R_180").Tags, Is.EqualTo(18u));
+			Assert.That(selection.Clips.Single(c => c.Clip.name == "M_Neutral_Walk_Reface_Start_F_R_180").Groups, Is.EqualTo(new[] { 2, 5 }));
 			Assert.That(selection.Clips.Where(c => c.Clip.name.Contains("Reface_Start")).All(c => !c.Loop && c.ActionId == 0), Is.True);
-			Assert.That(selection.Groups.Take(5).Select(g => g.Tags), Is.EqualTo(new uint[] { 1, 2, 4, 8, 16 }));
+			Assert.That(selection.Groups.Take(5).Select(g => g.Id), Is.EqualTo(new[] { 1, 2, 3, 4, 5 }));
 		}
 
 		[Test]

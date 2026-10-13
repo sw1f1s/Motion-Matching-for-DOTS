@@ -1,3 +1,6 @@
+using ColInt.MMD.MotionMatching.Helpers;
+using ColInt.MMD.MotionMatching.Data;
+using ColInt.MMD.MotionMatching.Components;
 using ColInt.MMD.Database.Components;
 using ColInt.MMD.Lifecycle.Components;
 using ColInt.MMD.Playback.Components;
@@ -41,7 +44,7 @@ namespace ColInt.MMD.Samples.Character.Movement.Shared.Systems {
 			[ReadOnly] public ComponentLookup<MmdSampleState<MmdSampleLanding>> Landing;
 
 			private void Execute(Entity entity, in MmdDatabase data, in MmdPlayback playback, in LocalTransform transform,
-				in MmdSampleFootContact contact, in MmdSampleGroundState ground, in MmdInertialization transitions,
+				in MmdSampleFootContact contact, in MmdSampleGroundState ground, in DynamicBuffer<MmdMotionGroup> groups,
 				ref MmdInertializationState smoothing, DynamicBuffer<MmdLocalPose> poses, DynamicBuffer<MmdInertialPose> history) {
 				if (!ground.IsGrounded || DeltaTime <= 0f) {
 					return;
@@ -50,7 +53,7 @@ namespace ColInt.MMD.Samples.Character.Movement.Shared.Systems {
 				// Landing compression and an Idle blend can straighten the legs before the pelvis rises.
 				// Correct the displayed skeleton only; physical root motion and jump timing remain independent.
 				if (!Landing.HasComponent(entity) && (smoothing.Elapsed >= smoothing.PoseDuration ||
-					(database.Clips[playback.ClipIndex].Tags & transitions.StationaryPoseTags) == 0)) {
+					!MmdMotionGroups.Any(ref database, database.Clips[playback.ClipIndex], groups, MmdMotionGroupUsage.StationaryPose))) {
 					return;
 				}
 				if (MmdSampleFootPose.Support(ref database, poses, contact, transform, ground.SupportHeight)) {

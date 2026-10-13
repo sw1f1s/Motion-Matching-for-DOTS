@@ -1,3 +1,5 @@
+using ColInt.MMD.MotionMatching.Helpers;
+using ColInt.MMD.MotionMatching.Data;
 using ColInt.MMD.Samples.Character.Movement.SlideState.Components;
 using ColInt.MMD.Samples.Character.Movement.LocomotionState.Helpers;
 using ColInt.MMD.Actions.Components;
@@ -57,7 +59,7 @@ namespace ColInt.MMD.Samples.Character.Movement.LocomotionState.Systems {
 
 			private void Execute(Entity entity, in MmdSampleCharacterControl control, in MmdTrajectoryEnvironment environment, in MmdActionState action, in MmdActionRequest request,
 				in LocalTransform transform, in MmdSampleMovement movement, ref MmdSampleTrajectoryState trajectory,
-				ref MmdSearchSettings settings, ref MmdPlayback playback) {
+				ref MmdSearchSettings settings, ref MmdPlayback playback, DynamicBuffer<MmdMotionGroup> groups) {
 				var input = CharacterInputs.HasComponent(entity) ? CharacterInputs[entity].Value : Input;
 				bool cancellingAction = action.ActionId != 0 && request.ActionId == 0 && request.Revision != action.RequestRevision;
 				if (action.ActionId != 0 && !cancellingAction) {
@@ -70,51 +72,51 @@ namespace ColInt.MMD.Samples.Character.Movement.LocomotionState.Systems {
 				// Crouch stops contain several approach steps. Prioritize the requested
 				// braking path over their matching moving foot phase when releasing input.
 				settings.TrajectoryPositionWeight = movement.CrouchCollider && !hasMovement ? CrouchStoppingPositionWeight : 1f;
-				bool wasTurning = control.TurnTags != 0 && settings.RequiredTags == control.TurnTags;
+				bool wasTurning = control.TurnGroup != 0 && MmdMotionGroups.Is(groups, MmdMotionGroupUsage.Required, control.TurnGroup);
 				float turnError = math.abs(MmdSampleFacing.YawError(transform.Rotation, desiredMovement));
-				bool turnInPlace = hasMovement && control.TurnTags != 0 &&
+				bool turnInPlace = hasMovement && control.TurnGroup != 0 &&
 					(wasTurning ? turnError > TurnExitAngle : math.isfinite(environment.MaximumSpeed) && turnError > TurnEntryAngle);
-				uint tags;
-				uint previousGait = settings.RequiredTags & ~control.StartTags;
-				bool wasMoving = previousGait == control.WalkTags || previousGait == control.RunTags || previousGait == control.SprintTags;
+				int group;
+				bool requireStart = false;
+				int previousGait = MmdMotionGroups.First(groups, MmdMotionGroupUsage.Required, control.StartGroup);
+				bool wasMoving = previousGait == control.WalkGroup || previousGait == control.RunGroup || previousGait == control.SprintGroup;
 				float movementThreshold = control.WalkSpeed * (wasMoving ? 0.2f : 0.3f);
 				if (turnInPlace) {
 					// Wall contact selects a turn; unobstructed starts stay searchable in their gait.
-					tags = control.TurnTags;
+					group = control.TurnGroup;
 					playback.Speed = 1f;
 				} else if (hasMovement && reachableSpeed > math.max(0.1f, movementThreshold)) {
-					bool wasRunning = previousGait == control.RunTags || previousGait == control.SprintTags;
+					bool wasRunning = previousGait == control.RunGroup || previousGait == control.SprintGroup;
 					bool running = (input.Run || input.Sprint) && reachableSpeed >= control.WalkSpeed * (wasRunning ? 1.1f : 1.5f);
-					bool wasSprinting = previousGait == control.SprintTags;
+					bool wasSprinting = previousGait == control.SprintGroup;
 					bool sprinting = input.Sprint && reachableSpeed >= control.RunSpeed * (wasSprinting ? 1.05f : 1.25f);
-					tags = sprinting ? control.SprintTags : running ? control.RunTags : control.WalkTags;
+					group = sprinting ? control.SprintGroup : running ? control.RunGroup : control.WalkGroup;
 					float clipSpeed = movement.CrouchCollider ? CrouchSettings[entity].AnimationSpeed : sprinting ? control.SprintSpeed : running ? control.RunSpeed : control.WalkSpeed;
 					// Normalize only the collision loss, without applying acceleration/braking twice.
 					playback.Speed = math.saturate(reachableSpeed / math.max(0.001f, clipSpeed));
 				} else {
-					tags = control.IdleTags;
+					group = control.IdleGroup;
 					playback.Speed = 1f;
 				}
-				uint excluded = settings.ExcludedTags & ~control.StartTags;
-				if (control.StartTags != 0 && (tags == control.WalkTags || tags == control.RunTags || tags == control.SprintTags)) {
-					bool wasStarting = (settings.RequiredTags & control.StartTags) != 0;
-					bool starting = settings.RequiredTags == control.IdleTags || wasStarting &&
+				bool excludeStart = false;
+				if (control.StartGroup != 0 && (group == control.WalkGroup || group == control.RunGroup || group == control.SprintGroup)) {
+					bool wasStarting = MmdMotionGroups.Contains(groups, control.StartGroup, MmdMotionGroupUsage.Required);
+					bool starting = MmdMotionGroups.Is(groups, MmdMotionGroupUsage.Required, control.IdleGroup) || wasStarting &&
 						(playback.TransitionElapsed < settings.MinimumTransitionTime || !movement.CrouchCollider && turnError > TurnEntryAngle ||
 						math.lengthsq(trajectory.Velocity.xz) < control.WalkSpeed * control.WalkSpeed * 0.09f);
 					if (starting) {
-						tags |= control.StartTags;
-					} else if (turnError <= TurnEntryAngle || tags == control.SprintTags) {
+						requireStart = true;
+					} else if (turnError <= TurnEntryAngle || group == control.SprintGroup) {
 						// Sprint reversals use moving pivots, not stationary reface starts.
 						// Walk/run retain their turning starts during reversals.
-						excluded |= playback.TransitionElapsed >= settings.MinimumTransitionTime
-							? control.StartTags : settings.ExcludedTags & control.StartTags;
+						excludeStart = playback.TransitionElapsed >= settings.MinimumTransitionTime || MmdMotionGroups.Contains(groups, control.StartGroup, MmdMotionGroupUsage.Excluded);
 					}
 				}
 				// Crouch keeps its stride through moving turns. Stationary starts remain
 				// eligible until acceleration settles, without restarting pivot tails.
 				// Sprint and standing action exits return to cycles after aligning.
-				settings.PreferLoop = (cancellingAction || movement.CrouchCollider || tags == control.SprintTags) &&
-					(tags == control.WalkTags || tags == control.RunTags || tags == control.SprintTags) && (movement.CrouchCollider || turnError <= TurnEntryAngle) &&
+				settings.PreferLoop = !requireStart && (cancellingAction || movement.CrouchCollider || group == control.SprintGroup) &&
+					(group == control.WalkGroup || group == control.RunGroup || group == control.SprintGroup) && (movement.CrouchCollider || turnError <= TurnEntryAngle) &&
 					math.lengthsq(trajectory.Velocity.xz) > math.square(control.WalkSpeed * 0.3f);
 				if (movement.CrouchCollider) {
 					// Moving turns and aligned strides must both follow the requested path.
@@ -125,12 +127,16 @@ namespace ColInt.MMD.Samples.Character.Movement.LocomotionState.Systems {
 				trajectory.DesiredMovement = desiredMovement;
 				// Continuous mouse rotation must not restart a sprint pose blend every tick.
 				// A discrete turn of more than 60 degrees still interrupts immediately.
-				if (changedDirection && (tags != control.SprintTags || directionChange > 1f || !wasMoving)) {
+				if (changedDirection && (requireStart || group != control.SprintGroup || directionChange > 1f || !wasMoving)) {
 					playback.TransitionElapsed = settings.MinimumTransitionTime;
 				}
-				if (settings.RequiredTags != tags || settings.ExcludedTags != excluded || changedDirection) {
-					settings.RequiredTags = tags;
-					settings.ExcludedTags = excluded;
+				if (!MmdMotionGroups.Is(groups, MmdMotionGroupUsage.Required, group, requireStart ? control.StartGroup : 0) ||
+					MmdMotionGroups.Contains(groups, control.StartGroup, MmdMotionGroupUsage.Excluded) != excludeStart || changedDirection) {
+					MmdMotionGroups.Set(groups, MmdMotionGroupUsage.Required, group, requireStart ? control.StartGroup : 0);
+					MmdMotionGroups.Remove(groups, control.StartGroup, MmdMotionGroupUsage.Excluded);
+					if (excludeStart) {
+						MmdMotionGroups.Add(groups, control.StartGroup, MmdMotionGroupUsage.Excluded);
+					}
 					playback.SearchCountdown = 0f;
 				}
 			}

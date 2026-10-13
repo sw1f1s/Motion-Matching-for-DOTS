@@ -34,10 +34,10 @@ namespace ColInt.MMD.Editor.Baking {
 
 		private void UpdateValidation(HelpBox message, Button bake, Button addGroup) {
 			bool editable = !EditorApplication.isPlayingOrWillChangePlaymode;
-			addGroup.SetEnabled(editable && ((MotionBakeConfiguration)target).Groups.Length < 32);
+			addGroup.SetEnabled(editable);
 			try {
 				MotionBakeSelection selection = MotionBakeGroupResolver.Resolve(((MotionBakeConfiguration)target).Groups);
-				MotionFeatureNormalization.ResolveTags(selection.Groups, ((MotionBakeConfiguration)target).NormalizationGroups);
+				MotionFeatureNormalization.ResolveGroups(selection.Groups, ((MotionBakeConfiguration)target).NormalizationGroups);
 				message.AddToClassList("mmd-hidden");
 				bake.SetEnabled(editable && selection.Clips.Length > 0);
 			} catch (System.ArgumentException exception) {

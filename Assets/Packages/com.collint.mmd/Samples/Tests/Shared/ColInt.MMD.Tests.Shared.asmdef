@@ -3,7 +3,8 @@
   "rootNamespace": "ColInt.MMD.Tests",
   "references": [
     "ColInt.MMD.Runtime",
-    "Unity.Mathematics"
+    "Unity.Mathematics",
+    "Unity.Collections"
   ],
   "autoReferenced": false,
   "optionalUnityReferences": [

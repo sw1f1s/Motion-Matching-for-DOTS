@@ -42,7 +42,7 @@ namespace ColInt.MMD.Samples.Character.Movement.Shared.Helpers {
 			if (fall.ActionId != 0) {
 				throw new ArgumentException("The Fall group must use Motion Matching playback.");
 			}
-			manager.AddComponentData(entity, new MmdSampleFall { Tags = fall.Tags });
+			manager.AddComponentData(entity, new MmdSampleFall { Group = fall.Id });
 			manager.AddComponentData(entity, new MmdSampleLanding {
 				StandLightAction = Action(ref database.Value, configuration.Landing.LightGroups.Stand), WalkLightAction = Action(ref database.Value, configuration.Landing.LightGroups.Walk),
 				RunLightAction = Action(ref database.Value, configuration.Landing.LightGroups.Run), StandHeavyAction = Action(ref database.Value, configuration.Landing.HeavyGroups.Stand),
@@ -55,8 +55,8 @@ namespace ColInt.MMD.Samples.Character.Movement.Shared.Helpers {
 				}
 				manager.AddComponentData(entity, new MmdSampleCrouch {
 					Speed = configuration.Crouch.Speed, AnimationSpeed = configuration.Crouch.AnimationSpeed, TransitionDuration = configuration.Crouch.TransitionDuration,
-					IdleTags = Matching(ref database.Value, configuration.Crouch.IdleGroup), MoveTags = Matching(ref database.Value, configuration.Crouch.MoveGroup),
-					TurnTags = Matching(ref database.Value, configuration.Crouch.TurnGroup), StartTags = Matching(ref database.Value, configuration.Crouch.StartGroup),
+					IdleGroup = Matching(ref database.Value, configuration.Crouch.IdleGroup), MoveGroup = Matching(ref database.Value, configuration.Crouch.MoveGroup),
+					TurnGroup = Matching(ref database.Value, configuration.Crouch.TurnGroup), StartGroup = Matching(ref database.Value, configuration.Crouch.StartGroup),
 					EnterAction = Action(ref database.Value, configuration.Crouch.EnterGroup), ExitAction = Action(ref database.Value, configuration.Crouch.ExitGroup)
 				});
 				manager.AddComponent<MmdSampleCrouchProgress>(entity);
@@ -90,12 +90,12 @@ namespace ColInt.MMD.Samples.Character.Movement.Shared.Helpers {
 			return foot;
 		}
 
-		private static uint Matching(ref MotionDatabase database, string name) {
+		private static int Matching(ref MotionDatabase database, string name) {
 			var group = MotionDatabaseGroups.GetGroup(ref database, new FixedString64Bytes(name));
 			if (group.ActionId != 0) {
 				throw new ArgumentException("Sample crouch locomotion groups must use Motion Matching playback.");
 			}
-			return group.Tags;
+			return group.Id;
 		}
 
 		private static int Action(ref MotionDatabase database, string name) {

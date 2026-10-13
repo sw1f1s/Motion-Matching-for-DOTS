@@ -34,7 +34,7 @@ namespace ColInt.MMD.Editor.Baking {
 
 		public static async Task BakeAsync(MotionBakeConfiguration configuration) {
 			MotionBakeSelection selection = MotionBakeGroupResolver.Resolve(configuration.Groups);
-			uint normalizationTags = MotionFeatureNormalization.ResolveTags(selection.Groups, configuration.NormalizationGroups);
+			int[] normalizationGroups = MotionFeatureNormalization.ResolveGroups(selection.Groups, configuration.NormalizationGroups);
 			if (EditorApplication.isPlayingOrWillChangePlaymode || configuration.Rig == null || selection.Clips.Length == 0 ||
 				configuration.SampleRate <= 0f || string.IsNullOrWhiteSpace(configuration.Output) ||
 				!IsWritableOutput(configuration.Output)) {
@@ -54,7 +54,7 @@ namespace ColInt.MMD.Editor.Baking {
 			instance.hideFlags = HideFlags.HideAndDontSave;
 			var frames = new List<MotionFrame>();
 			var poses = new List<JointPose>();
-			var clips = new List<MotionClip>();
+			var clips = new List<MotionClipSource>();
 			try {
 				Transform[] bones = instance.GetComponentsInChildren<Transform>(true).Where(t => t != instance.transform).ToArray();
 				string[] paths = bones.Select(t => AnimationUtility.CalculateTransformPath(t, instance.transform)).ToArray();
@@ -163,9 +163,9 @@ namespace ColInt.MMD.Editor.Baking {
 						}
 						await Task.Yield();
 						cancellation.ThrowIfCancellationRequested();
-						clips.Add(new MotionClip {
+						clips.Add(new MotionClipSource {
 							FirstFrame = first, FrameCount = samples, Duration = source.Clip.length,
-							SampleRate = configuration.SampleRate, Loop = source.Loop, Tags = source.Tags, ActionId = source.ActionId
+							SampleRate = configuration.SampleRate, Loop = source.Loop, Groups = source.Groups, ActionId = source.ActionId
 						});
 					} finally {
 						if (_activeSourceRoot != null) {
@@ -186,7 +186,7 @@ namespace ColInt.MMD.Editor.Baking {
 					FeatureScales = Enumerable.Repeat(1f, LocomotionSchema.Dimension).ToArray()
 				};
 				BakeFeatures(data, leftIndex, rightIndex);
-				MotionFeatureNormalization.Normalize(data, normalizationTags);
+				MotionFeatureNormalization.Normalize(data, normalizationGroups);
 				byte[] bytes = MotionDatabaseCodec.Write(data);
 				Directory.CreateDirectory(Path.GetDirectoryName(configuration.Output));
 				string temporary = configuration.Output + ".tmp";
@@ -279,7 +279,7 @@ namespace ColInt.MMD.Editor.Baking {
 		}
 
 		private static void WriteFoot(MotionDatabaseSource source, int frame, int bone, int offset, float interval) {
-			MotionClip clip = source.Clips[source.Frames[frame].ClipIndex];
+			MotionClipSource clip = source.Clips[source.Frames[frame].ClipIndex];
 			int next = math.min(frame + 1, clip.FirstFrame + clip.FrameCount - 1);
 			float3 position = BonePosition(source, frame, bone);
 			float3 velocity = (BonePosition(source, next, bone) - position) / interval;

@@ -5,7 +5,6 @@ namespace ColInt.MMD.Playback.Components {
 	public struct MmdInertialization : IComponentData {
 		public float PoseDuration;
 		public float StationaryPoseDuration;
-		public uint StationaryPoseTags;
 		public float RootDuration;
 	}
 }

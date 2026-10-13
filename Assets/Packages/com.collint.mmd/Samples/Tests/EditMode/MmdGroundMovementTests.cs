@@ -1,3 +1,5 @@
+using ColInt.MMD.MotionMatching.Helpers;
+using ColInt.MMD.MotionMatching.Data;
 using ColInt.MMD.Actions.Components;
 using ColInt.MMD.Database.Helpers;
 using ColInt.MMD.Lifecycle.Components;
@@ -172,7 +174,7 @@ namespace ColInt.MMD.Tests {
 							actor = sample.Characters.Create(MotionDatabaseBuilder.Build(MotionDatabaseFixture.Create()), false, spawn);
 							MmdSampleCharacterPhysicsBuilder.Add(manager, actor);
 							manager.AddComponent<MmdSampleMovement>(actor);
-							manager.AddComponentData(actor, new MmdSampleCharacterControl { WalkSpeed = 1f, TurnSpeed = 4.5f, IdleTags = 1, WalkTags = 2 });
+							manager.AddComponentData(actor, new MmdSampleCharacterControl { WalkSpeed = 1f, TurnSpeed = 4.5f, IdleGroup = 1, WalkGroup = 2 });
 						}
 						sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f) });
 						bool predictedPastEdge = false;
@@ -208,14 +210,14 @@ namespace ColInt.MMD.Tests {
 						var actor = sample.Characters.Create(MotionDatabaseBuilder.Build(MotionDatabaseFixture.Create()), false, LocalTransform.Identity);
 						MmdSampleCharacterPhysicsBuilder.Add(manager, actor);
 						manager.AddComponent<MmdSampleMovement>(actor);
-						manager.AddComponentData(actor, new MmdSampleCharacterControl { WalkSpeed = 1f, TurnSpeed = 4.5f, IdleTags = 1, WalkTags = 2 });
+						manager.AddComponentData(actor, new MmdSampleCharacterControl { WalkSpeed = 1f, TurnSpeed = 4.5f, IdleGroup = 1, WalkGroup = 2 });
 						sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f) });
 						for (int i = 0; i < 180; i++) {
 							sample.Tick();
 						}
 						float3 position = manager.GetComponentData<LocalTransform>(actor).Position;
 						Assert.That(position.z, Is.LessThanOrEqualTo(0.21f));
-						Assert.That(manager.GetComponentData<MmdSearchSettings>(actor).RequiredTags, Is.EqualTo(1u));
+						Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(actor), MmdMotionGroupUsage.Required), Is.EqualTo(1));
 						Assert.That(math.length(manager.GetComponentData<MmdSampleTrajectoryState>(actor).Velocity.xz), Is.LessThan(0.05f));
 						var points = manager.GetBuffer<MmdTrajectoryPoint>(actor);
 						Assert.That(points[2].Position.z, Is.LessThanOrEqualTo(0.21f));
@@ -223,7 +225,7 @@ namespace ColInt.MMD.Tests {
 						for (int i = 0; i < 360; i++) {
 							sample.Tick();
 						}
-						Assert.That(manager.GetComponentData<MmdSearchSettings>(actor).RequiredTags, Is.EqualTo(2u));
+						Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(actor), MmdMotionGroupUsage.Required), Is.EqualTo(2));
 						Assert.That(manager.GetComponentData<LocalTransform>(actor).Position.z, Is.LessThan(position.z - 1f));
 					}
 				}
@@ -249,7 +251,7 @@ namespace ColInt.MMD.Tests {
 						float3 stopped = manager.GetComponentData<LocalTransform>(actor).Position;
 						for (int i = 0; i < 120; i++) {
 							sample.Tick();
-							Assert.That(manager.GetComponentData<MmdSearchSettings>(actor).RequiredTags, Is.EqualTo(1u));
+							Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(actor), MmdMotionGroupUsage.Required), Is.EqualTo(1));
 							Assert.That(math.distance(manager.GetComponentData<LocalTransform>(actor).Position, stopped), Is.LessThan(0.01f));
 							Assert.That(manager.GetComponentData<MmdFault>(actor).Code, Is.EqualTo(MmdFaultCode.None));
 						}
@@ -321,7 +323,7 @@ namespace ColInt.MMD.Tests {
 					manager.AddComponent<MmdSampleMovement>(actor);
 					manager.AddComponentData(actor, new MmdActionRequest { PreferredClip = -1 });
 					manager.AddComponentData(actor, new MmdSampleCharacterControl {
-						WalkSpeed = 2f, RunSpeed = 5f, TurnSpeed = 4.5f, IdleTags = 1, WalkTags = 2, RunTags = 4
+						WalkSpeed = 2f, RunSpeed = 5f, TurnSpeed = 4.5f, IdleGroup = 1, WalkGroup = 2, RunGroup = 4
 					});
 					manager.AddComponent<MmdSearchSettings>(actor);
 					manager.AddComponentData(actor, new MmdPlayback { Speed = 1f });
@@ -331,7 +333,7 @@ namespace ColInt.MMD.Tests {
 					sample.SetInput(new MmdSampleInput { Movement = new float2(x, z), Run = true });
 					sample.Tick();
 					Assert.That(manager.GetComponentData<MmdTrajectoryEnvironment>(actor).MaximumSpeed, Is.EqualTo(float.PositiveInfinity));
-					Assert.That(manager.GetComponentData<MmdSearchSettings>(actor).RequiredTags, Is.EqualTo(4u));
+					Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(actor), MmdMotionGroupUsage.Required), Is.EqualTo(4));
 					Assert.That(manager.GetComponentData<MmdPlayback>(actor).Speed, Is.EqualTo(1f));
 					Assert.That(math.distance(manager.GetBuffer<MmdTrajectoryPoint>(actor)[2].Position,
 						manager.GetComponentData<MmdSearchQuerySpace>(actor).Position), Is.GreaterThan(0.1f));
@@ -362,7 +364,7 @@ namespace ColInt.MMD.Tests {
 						sample.Tick();
 						Assert.That(manager.GetComponentData<MmdTrajectoryEnvironment>(actor).MaximumSpeed, Is.EqualTo(float.PositiveInfinity));
 						Assert.That(manager.GetComponentData<MmdPlayback>(actor).Speed, Is.EqualTo(1f));
-						Assert.That(manager.GetComponentData<MmdSearchSettings>(actor).RequiredTags, Is.EqualTo(4u));
+						Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(actor), MmdMotionGroupUsage.Required), Is.EqualTo(4));
 						Assert.That(manager.GetComponentData<MmdFault>(actor).Code, Is.EqualTo(MmdFaultCode.None));
 						float error = math.abs(ColInt.MMD.Samples.Character.Movement.Facing.Helpers.MmdSampleFacing.YawError(
 							manager.GetComponentData<LocalTransform>(actor).Rotation, movement));
@@ -398,7 +400,7 @@ namespace ColInt.MMD.Tests {
 						sample.SetInput(new MmdSampleInput { Movement = direction, Facing = direction, Run = true });
 						sample.Tick();
 						Assert.That(manager.GetComponentData<MmdPlayback>(actor).Speed, Is.EqualTo(1f));
-						Assert.That(manager.GetComponentData<MmdSearchSettings>(actor).RequiredTags, Is.EqualTo(4u));
+						Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(actor), MmdMotionGroupUsage.Required), Is.EqualTo(4));
 						Assert.That(manager.GetComponentData<MmdTrajectoryEnvironment>(actor).MaximumSpeed, Is.EqualTo(float.PositiveInfinity));
 						float error = math.abs(ColInt.MMD.Samples.Character.Movement.Facing.Helpers.MmdSampleFacing.YawError(
 							manager.GetComponentData<LocalTransform>(actor).Rotation, direction));

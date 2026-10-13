@@ -1,3 +1,4 @@
+using ColInt.MMD.Database.Helpers;
 using ColInt.MMD.Database.Components;
 using ColInt.MMD.Actions.Components;
 using ColInt.MMD.Lifecycle.Components;
@@ -55,9 +56,9 @@ namespace ColInt.MMD.Tests {
 			var control = manager.GetComponentData<MmdSampleCharacterControl>(_character);
 			var data = manager.GetComponentData<MmdDatabase>(_character).Value;
 			var playback = manager.GetComponentData<MmdPlayback>(_character);
-			uint tags = sprint ? control.SprintTags : run ? control.RunTags : control.WalkTags;
-			Assert.That(tags, Is.Not.Zero);
-			Assert.That(data.Value.Clips[playback.ClipIndex].Tags & tags, Is.EqualTo(tags));
+			int group = sprint ? control.SprintGroup : run ? control.RunGroup : control.WalkGroup;
+			Assert.That(group, Is.Not.Zero);
+			Assert.That(MotionDatabaseGroups.Contains(ref data.Value, data.Value.Clips[playback.ClipIndex], group), Is.True);
 			AssertHealthy();
 		}
 
@@ -282,7 +283,7 @@ namespace ColInt.MMD.Tests {
 				}
 			}
 			Assert.That(exit, Is.GreaterThanOrEqualTo(0));
-			Assert.That(data.Value.Clips[exit].Tags & slide.MotionTags, Is.Not.Zero);
+			Assert.That(MotionDatabaseGroups.Contains(ref data.Value, data.Value.Clips[exit], slide.MotionGroup), Is.True);
 			var query = manager.GetBuffer<MmdSearchQueryElement>(_character);
 			for (int feature = 15; feature < query.Length; feature++) {
 				query[feature] = new MmdSearchQueryElement { Value = data.Value.Features[data.Value.Clips[exit].FirstFrame * query.Length + feature] };
@@ -349,7 +350,7 @@ namespace ColInt.MMD.Tests {
 				var data = manager.GetComponentData<MmdDatabase>(_character).Value;
 				var playback = manager.GetComponentData<MmdPlayback>(_character);
 				var crouch = manager.GetComponentData<MmdSampleCrouch>(_character);
-				Assert.That(data.Value.Clips[playback.ClipIndex].Tags & crouch.MoveTags, Is.EqualTo(crouch.MoveTags));
+				Assert.That(MotionDatabaseGroups.Contains(ref data.Value, data.Value.Clips[playback.ClipIndex], crouch.MoveGroup), Is.True);
 			}
 			AssertHealthy();
 		}

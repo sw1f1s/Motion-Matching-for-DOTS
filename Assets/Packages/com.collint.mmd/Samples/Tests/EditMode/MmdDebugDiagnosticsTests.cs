@@ -13,6 +13,31 @@ using Unity.Transforms;
 namespace ColInt.MMD.Tests {
 	public class MmdDebugDiagnosticsTests {
 		[Test]
+		public void SampleCatalogResolvesNamesFromThePackedRuntimeDatabase() {
+			const string path = "Assets/Packages/com.collint.mmd/Samples/Databases/Locomotion.bytes";
+			var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.TextAsset>(path);
+			using (var database = MotionDatabaseCodec.Load(asset.GetData<byte>())) {
+				var store = new MmdDebugCatalogStore();
+				store.Reload();
+				var catalog = store.Resolve(database);
+				Assert.That(catalog, Is.Not.Null);
+				Assert.That(catalog.Names.Length, Is.EqualTo(database.Value.Clips.Length));
+				Assert.That(catalog.Names[0], Is.EqualTo("M_Neutral_Stand_Idle_Loop"));
+				using (var sample = new MmdSampleWorld(0.1f)) {
+					// The factory owns its database; use a separate loaded instance.
+					var actor = sample.Characters.Create(MotionDatabaseCodec.Load(asset.GetData<byte>()), false, LocalTransform.Identity);
+					using (var reader = new MmdDebugSnapshotReader()) {
+						reader.ReloadCatalogs();
+						reader.Read();
+						var snapshot = reader.Entities.Single(item => item.World == sample.World && item.Entity == actor);
+						Assert.That(snapshot.HasNames, Is.True);
+						Assert.That(snapshot.ClipName, Is.EqualTo(catalog.Names[0]));
+					}
+				}
+			}
+		}
+
+		[Test]
 		public void ReaderWaitsForExclusiveLoadingTransactionAndPreservesClipHistory() {
 			using (var sample = new MmdSampleWorld(0.1f)) {
 				using (var reader = new MmdDebugSnapshotReader()) {
@@ -141,7 +166,9 @@ namespace ColInt.MMD.Tests {
 						Assert.That(MmdDebugCatalogStore.Fingerprint(ref changed.Value), Is.Not.EqualTo(expected));
 					}
 					source.Poses[0] = ColInt.MMD.Playback.Helpers.MmdAnimationMath.PoseSample(ref first.Value, 0, 0);
-					source.Groups = new[] { new MotionGroup { Name = new Unity.Collections.FixedString64Bytes("Idle"), Tags = 1 } };
+					source.Groups = new[] { new MotionGroup { Name = new Unity.Collections.FixedString64Bytes("Idle"), Id = 1 } };
+					source.Clips[1].Groups = System.Array.Empty<int>();
+					source.Clips[2].Groups = System.Array.Empty<int>();
 					using (var renamed = MotionDatabaseBuilder.Build(source)) {
 						Assert.That(MmdDebugCatalogStore.Fingerprint(ref renamed.Value), Is.Not.EqualTo(expected));
 					}

@@ -52,7 +52,7 @@ namespace ColInt.MMD.Tests {
 		[Test]
 		public void MalformedCompactCountsTracksAndChannelValuesAreRejected() {
 			byte[] valid = MotionDatabaseCodec.Write(MotionDatabaseFixture.Create());
-			int trackOffset = 36 + 2 * 8 + 3 * 25 + 33 * 36;
+			int trackOffset = 40 + 2 * 8 + 3 * 29 + 3 * 4 + 33 * 36;
 			byte[] damaged = (byte[])valid.Clone();
 			Array.Copy(BitConverter.GetBytes(int.MaxValue), 0, damaged, 24, 4);
 			Assert.Throws<InvalidDataException>(() => MotionDatabaseCodec.Load(damaged));
@@ -66,7 +66,7 @@ namespace ColInt.MMD.Tests {
 			Array.Copy(BitConverter.GetBytes(float.NaN), 0, damaged, trackOffset + 6 * 13, 4);
 			Assert.Throws<InvalidDataException>(() => MotionDatabaseCodec.Load(damaged));
 			damaged = (byte[])valid.Clone();
-			Array.Copy(BitConverter.GetBytes(float.NaN), 0, damaged, 36 + 2 * 8 + 3 * 25 + 4, 4);
+			Array.Copy(BitConverter.GetBytes(float.NaN), 0, damaged, 40 + 2 * 8 + 3 * 29 + 3 * 4 + 4, 4);
 			Assert.Throws<InvalidDataException>(() => MotionDatabaseCodec.Load(damaged));
 			damaged = (byte[])valid.Clone();
 			Array.Resize(ref damaged, 32);
@@ -140,7 +140,15 @@ namespace ColInt.MMD.Tests {
 			Assert.That(database.Features.ToArray(), Is.EqualTo(source.Features));
 			Assert.That(database.FeatureScales.ToArray(), Is.EqualTo(source.FeatureScales));
 			Assert.That(database.Frames.ToArray(), Is.EqualTo(source.Frames));
-			Assert.That(database.Clips.ToArray(), Is.EqualTo(source.Clips));
+			Assert.That(database.Clips.Length, Is.EqualTo(source.Clips.Length));
+			for (int index = 0; index < source.Clips.Length; index++) {
+				var stored = database.Clips[index];
+				var original = source.Clips[index];
+				Assert.That((stored.FirstFrame, stored.FrameCount, stored.Duration, stored.SampleRate, stored.ActionId, stored.Loop),
+					Is.EqualTo((original.FirstFrame, original.FrameCount, original.Duration, original.SampleRate, original.ActionId, original.Loop)));
+				var groups = MotionDatabaseGroups.GetIds(ref database, stored);
+				Assert.That(groups, Is.EqualTo(original.Groups));
+			}
 			for (int frame = 0; frame < source.Frames.Length; frame++) {
 				for (int bone = 0; bone < source.Parents.Length; bone++) {
 					JointPose expected = source.Poses[frame * source.Parents.Length + bone];

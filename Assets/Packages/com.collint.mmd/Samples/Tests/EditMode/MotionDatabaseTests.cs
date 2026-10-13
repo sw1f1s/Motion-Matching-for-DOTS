@@ -30,8 +30,9 @@ namespace ColInt.MMD.Tests {
 		public void NamedGroupsRoundTripIncludingUnicodeAndActionLookup() {
 			var source = MotionDatabaseFixture.Create();
 			source.Groups = new[] {
-				new MotionGroup { Name = new Unity.Collections.FixedString64Bytes("Бег"), Tags = 2 },
-				new MotionGroup { Name = new Unity.Collections.FixedString64Bytes("Vault"), Tags = 4, ActionId = 7 }
+				new MotionGroup { Name = new Unity.Collections.FixedString64Bytes("Idle"), Id = 1 },
+				new MotionGroup { Name = new Unity.Collections.FixedString64Bytes("Бег"), Id = 2 },
+				new MotionGroup { Name = new Unity.Collections.FixedString64Bytes("Vault"), Id = 4, ActionId = 7 }
 			};
 			var restored = MotionDatabaseCodec.Read(MotionDatabaseCodec.Write(source));
 			Assert.That(restored.Groups, Is.EqualTo(source.Groups));
@@ -47,6 +48,7 @@ namespace ColInt.MMD.Tests {
 		[TestCase(2)]
 		[TestCase(3)]
 		[TestCase(4)]
+		[TestCase(5)]
 		public void NonCurrentDatabaseVersionsAreRejected(int version) {
 			byte[] bytes = MotionDatabaseCodec.Write(MotionDatabaseFixture.Create());
 			Array.Copy(BitConverter.GetBytes(version), 0, bytes, 4, 4);
@@ -65,7 +67,9 @@ namespace ColInt.MMD.Tests {
 		[Test]
 		public void MalformedGroupCatalogAndDuplicateMetadataAreRejected() {
 			var source = MotionDatabaseFixture.Create();
-			source.Groups = new[] { new MotionGroup { Name = new Unity.Collections.FixedString64Bytes("Run"), Tags = 2 } };
+			source.Groups = new[] { new MotionGroup { Name = new Unity.Collections.FixedString64Bytes("Run"), Id = 2 } };
+			source.Clips[0].Groups = Array.Empty<int>();
+			source.Clips[2].Groups = Array.Empty<int>();
 			byte[] bytes = MotionDatabaseCodec.Write(source);
 			bytes[bytes.Length - 78] = 62;
 			Assert.Throws<InvalidDataException>(() => MotionDatabaseCodec.Read(bytes));

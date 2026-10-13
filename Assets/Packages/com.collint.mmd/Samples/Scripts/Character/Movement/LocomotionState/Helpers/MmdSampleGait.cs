@@ -16,8 +16,8 @@ namespace ColInt.MMD.Samples.Character.Movement.LocomotionState.Helpers {
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static uint Tags(in MmdSampleCharacterControl control, in MmdSampleInput input) {
-			return input.Sprint ? control.SprintTags : input.Run ? control.RunTags : control.WalkTags;
+		public static int Group(in MmdSampleCharacterControl control, in MmdSampleInput input) {
+			return input.Sprint ? control.SprintGroup : input.Run ? control.RunGroup : control.WalkGroup;
 		}
 	}
 }

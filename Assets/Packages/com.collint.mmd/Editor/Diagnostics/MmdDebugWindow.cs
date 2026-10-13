@@ -71,6 +71,9 @@ namespace ColInt.MMD.Editor.Diagnostics {
 		}
 
 		private void PlayModeChanged(PlayModeStateChange state) {
+			if (state == PlayModeStateChange.EnteredPlayMode || state == PlayModeStateChange.EnteredEditMode) {
+				_reader.ReloadCatalogs();
+			}
 			_nextRefresh = 0d;
 		}
 

@@ -1,3 +1,4 @@
+using ColInt.MMD.MotionMatching.Data;
 using System.Collections.Generic;
 using System;
 using ColInt.MMD.Actions.Components;
@@ -49,18 +50,19 @@ namespace ColInt.MMD.Samples.Character.Helpers {
 				MmdSampleCharacterPhysicsBuilder.Add(manager, entity, string.IsNullOrEmpty(configuration.Crouch.IdleGroup) ? 0f : configuration.Crouch.Height);
 				if (database.IsCreated) {
 					manager.AddComponentData(entity, new MmdInertialization {
-						PoseDuration = configuration.Transitions.PoseDuration, StationaryPoseDuration = configuration.Transitions.IdlePoseDuration, RootDuration = configuration.Transitions.RootDuration,
-						StationaryPoseTags = ResolveTags(database, configuration.Locomotion.IdleGroup) | ResolveTags(database, configuration.Crouch.IdleGroup)
+						PoseDuration = configuration.Transitions.PoseDuration, StationaryPoseDuration = configuration.Transitions.IdlePoseDuration, RootDuration = configuration.Transitions.RootDuration
 					});
+					var groups = manager.GetBuffer<MmdMotionGroup>(entity);
+					MmdMotionGroups.Set(groups, MmdMotionGroupUsage.StationaryPose, ResolveGroup(database, configuration.Locomotion.IdleGroup), ResolveGroup(database, configuration.Crouch.IdleGroup));
 					manager.AddComponent<MmdInertializationState>(entity);
 					manager.AddBuffer<MmdInertialPose>(entity);
 				}
 				if (playerControlled) {
 					manager.AddComponentData(entity, new MmdSampleCharacterControl {
 						WalkSpeed = configuration.Locomotion.WalkSpeed, RunSpeed = configuration.Locomotion.RunSpeed, SprintSpeed = configuration.Locomotion.SprintSpeed, TurnSpeed = configuration.Locomotion.TurnSpeed,
-						IdleTags = ResolveTags(database, configuration.Locomotion.IdleGroup), WalkTags = ResolveTags(database, configuration.Locomotion.WalkGroup),
-						RunTags = ResolveTags(database, configuration.Locomotion.RunGroup), SprintTags = ResolveTags(database, configuration.Locomotion.SprintGroup), TurnTags = ResolveTags(database, configuration.Locomotion.TurnGroup),
-						StartTags = ResolveTags(database, configuration.Locomotion.StartGroup)
+						IdleGroup = ResolveGroup(database, configuration.Locomotion.IdleGroup), WalkGroup = ResolveGroup(database, configuration.Locomotion.WalkGroup),
+						RunGroup = ResolveGroup(database, configuration.Locomotion.RunGroup), SprintGroup = ResolveGroup(database, configuration.Locomotion.SprintGroup), TurnGroup = ResolveGroup(database, configuration.Locomotion.TurnGroup),
+						StartGroup = ResolveGroup(database, configuration.Locomotion.StartGroup)
 					});
 				}
 				if (database.IsCreated) {
@@ -103,6 +105,7 @@ namespace ColInt.MMD.Samples.Character.Helpers {
 			Entity entity = manager.CreateEntity(typeof(LocalTransform));
 			try {
 				manager.SetComponentData(entity, spawnTransform);
+				manager.AddBuffer<MmdMotionGroup>(entity);
 				manager.AddComponent<MmdSampleTrajectoryState>(entity);
 				manager.AddComponent<MmdActionState>(entity);
 				manager.AddComponentData(entity, new MmdTrajectoryEnvironment { MaximumSpeed = float.PositiveInfinity, MovementFraction = 1f });
@@ -183,7 +186,7 @@ namespace ColInt.MMD.Samples.Character.Helpers {
 			}
 		}
 
-		private static uint ResolveTags(BlobAssetReference<MotionDatabase> database, string name) {
+		private static int ResolveGroup(BlobAssetReference<MotionDatabase> database, string name) {
 			if (string.IsNullOrEmpty(name)) {
 				return 0;
 			}
@@ -191,7 +194,7 @@ namespace ColInt.MMD.Samples.Character.Helpers {
 			if (group.ActionId != 0) {
 				throw new ArgumentException("Sample locomotion requires a Motion Matching group.");
 			}
-			return group.Tags;
+			return group.Id;
 		}
 
 	}

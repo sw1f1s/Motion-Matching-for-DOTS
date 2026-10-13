@@ -92,7 +92,7 @@ namespace ColInt.MMD.Editor.Diagnostics {
 					for (int index = 0; index < database.Groups.Length; index++) {
 						ref var group = ref database.Groups[index];
 						writer.Write(group.Name.ToString());
-						writer.Write(group.Tags);
+						writer.Write(group.Id);
 						writer.Write(group.ActionId);
 					}
 					writer.Write(database.Clips.Length);
@@ -102,7 +102,11 @@ namespace ColInt.MMD.Editor.Diagnostics {
 						writer.Write(clip.FrameCount);
 						writer.Write(clip.Duration);
 						writer.Write(clip.SampleRate);
-						writer.Write(clip.Tags);
+						int[] groups = MotionDatabaseGroups.GetIds(ref database, clip);
+						writer.Write(groups.Length);
+						foreach (int group in groups) {
+							writer.Write(group);
+						}
 						writer.Write(clip.ActionId);
 						writer.Write(clip.Loop);
 						WriteSample(writer, ref database, clip.FirstFrame);

@@ -9,6 +9,6 @@ namespace ColInt.MMD.Samples.Character.Movement.SlideState.Components {
 		public float SteeringSpeed;
 		public float MinimumDownhillNormalY;
 		public int EnterAction;
-		public uint MotionTags;
+		public int MotionGroup;
 	}
 }

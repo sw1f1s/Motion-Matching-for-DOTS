@@ -12,7 +12,8 @@
     "Unity.Deformations",
     "Unity.Physics",
     "ColInt.MMD.Tests.Shared",
-    "ColInt.MMD.Samples.Editor"
+    "ColInt.MMD.Samples.Editor",
+    "Unity.Burst"
   ],
   "allowUnsafeCode": true,
   "autoReferenced": false,

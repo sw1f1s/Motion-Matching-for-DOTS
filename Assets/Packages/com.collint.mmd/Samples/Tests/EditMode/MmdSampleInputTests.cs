@@ -1,3 +1,5 @@
+using ColInt.MMD.MotionMatching.Helpers;
+using ColInt.MMD.MotionMatching.Data;
 using ColInt.MMD.Actions.Components;
 using ColInt.MMD.Database.Components;
 using ColInt.MMD.Database.Helpers;
@@ -62,7 +64,7 @@ namespace ColInt.MMD.Tests {
 				Entity character = sample.Characters.Create(MotionDatabaseBuilder.Build(MotionDatabaseFixture.Create()), true, LocalTransform.Identity);
 				var manager = sample.World.EntityManager;
 				manager.AddComponent<MmdSampleMovement>(character);
-				manager.AddComponentData(character, new MmdSampleCharacterControl { WalkSpeed = 1f, TurnSpeed = 4.5f, IdleTags = 1, WalkTags = 2, TurnTags = 8 });
+				manager.AddComponentData(character, new MmdSampleCharacterControl { WalkSpeed = 1f, TurnSpeed = 4.5f, IdleGroup = 1, WalkGroup = 2, TurnGroup = 8 });
 				manager.AddComponentData(character, new MmdInertialization { PoseDuration = 0.2f, RootDuration = 0.1f });
 				manager.AddComponent<MmdInertializationState>(character);
 				manager.AddBuffer<MmdInertialPose>(character);
@@ -80,7 +82,7 @@ namespace ColInt.MMD.Tests {
 					sample.SetInput(new MmdSampleInput { Facing = new float2(math.sin(yaw), math.cos(yaw)) });
 					sample.Tick();
 					Assert.That(math.distance(manager.GetComponentData<LocalTransform>(character).Rotation.value, heading.value), Is.LessThan(0.000001f));
-					Assert.That(manager.GetComponentData<MmdSearchSettings>(character).RequiredTags, Is.EqualTo(1u));
+					Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(character), MmdMotionGroupUsage.Required), Is.EqualTo(1));
 					Assert.That(manager.GetComponentData<MmdRootMotion>(character).Rotation, Is.EqualTo(quaternion.identity));
 					var query = manager.GetBuffer<MmdSearchQueryElement>(character);
 					for (int point = 0; point < 3; point++) {
@@ -91,13 +93,13 @@ namespace ColInt.MMD.Tests {
 			}
 		}
 
-		[TestCase(0f, 0f, false, 0f, 1u)]
-		[TestCase(0f, 0f, true, 0f, 1u)]
-		[TestCase(0f, 1f, false, 0f, 2u)]
-		[TestCase(1f, 1f, true, 0f, 4u)]
-		[TestCase(0f, 0f, false, -1f, 1u)]
-		[TestCase(0f, 1f, false, 1f, 2u)]
-		public void LocomotionIntentFiltersOnlyControlledActiveCharacters(float x, float y, bool run, float turn, uint tags) {
+		[TestCase(0f, 0f, false, 0f, 1)]
+		[TestCase(0f, 0f, true, 0f, 1)]
+		[TestCase(0f, 1f, false, 0f, 2)]
+		[TestCase(1f, 1f, true, 0f, 4)]
+		[TestCase(0f, 0f, false, -1f, 1)]
+		[TestCase(0f, 1f, false, 1f, 2)]
+		public void LocomotionIntentFiltersOnlyControlledActiveCharacters(float x, float y, bool run, float turn, int group) {
 			using (var world = new MmdSampleWorld(0.1f)) {
 				var manager = world.World.EntityManager;
 				Entity controlled = world.Characters.Create(default, true, LocalTransform.Identity);
@@ -105,9 +107,9 @@ namespace ColInt.MMD.Tests {
 				Entity other = world.Characters.Create(default, true, LocalTransform.Identity);
 				var control = new MmdSampleCharacterControl {
 					WalkSpeed = 2f, RunSpeed = 4f, TurnSpeed = 1f,
-					IdleTags = 1, WalkTags = 2, RunTags = 4, TurnTags = 8
+					IdleGroup = 1, WalkGroup = 2, RunGroup = 4, TurnGroup = 8
 				};
-				var settings = new MmdSearchSettings { RequiredTags = 32, ExcludedTags = 16, Interval = 0.25f, SwitchPenalty = 0.4f };
+				var settings = new MmdSearchSettings { Interval = 0.25f, SwitchPenalty = 0.4f };
 				manager.AddComponent<MmdSampleMovement>(controlled);
 				manager.AddComponentData(controlled, new MmdActionRequest { PreferredClip = -1 });
 				manager.AddComponentData(controlled, control);
@@ -115,42 +117,48 @@ namespace ColInt.MMD.Tests {
 				manager.AddComponentData(disabled, new MmdActionRequest { PreferredClip = -1 });
 				manager.AddComponentData(disabled, control);
 				manager.AddComponentData(controlled, settings);
+				MmdMotionGroups.Set(manager.GetBuffer<MmdMotionGroup>(controlled), MmdMotionGroupUsage.Required, 32);
+				MmdMotionGroups.Set(manager.GetBuffer<MmdMotionGroup>(controlled), MmdMotionGroupUsage.Excluded, 16);
 				manager.AddComponentData(disabled, settings);
+				MmdMotionGroups.Set(manager.GetBuffer<MmdMotionGroup>(disabled), MmdMotionGroupUsage.Required, 32);
+				MmdMotionGroups.Set(manager.GetBuffer<MmdMotionGroup>(disabled), MmdMotionGroupUsage.Excluded, 16);
 				manager.AddComponentData(other, settings);
+				MmdMotionGroups.Set(manager.GetBuffer<MmdMotionGroup>(other), MmdMotionGroupUsage.Required, 32);
+				MmdMotionGroups.Set(manager.GetBuffer<MmdMotionGroup>(other), MmdMotionGroupUsage.Excluded, 16);
 				manager.AddComponentData(controlled, new MmdPlayback { SearchCountdown = 1f, Time = 0.7f, Revision = 9 });
 				manager.AddComponentData(disabled, new MmdPlayback { SearchCountdown = 1f });
 				manager.AddComponent<Disabled>(disabled);
 				world.SetInput(new MmdSampleInput { Movement = new float2(x, y), Run = run, Facing = turn == 0f ? float2.zero : new float2(math.sin(turn), math.cos(turn)) });
 				world.Tick();
 				var actual = manager.GetComponentData<MmdSearchSettings>(controlled);
-				Assert.That(actual.RequiredTags, Is.EqualTo(tags));
-				Assert.That(actual.ExcludedTags, Is.EqualTo(16u));
+				Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(controlled), MmdMotionGroupUsage.Required), Is.EqualTo(group));
+				Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(controlled), MmdMotionGroupUsage.Excluded), Is.EqualTo(16));
 				Assert.That(actual.Interval, Is.EqualTo(0.25f));
 				Assert.That(actual.SwitchPenalty, Is.EqualTo(0.4f));
 				var playback = manager.GetComponentData<MmdPlayback>(controlled);
 				Assert.That(playback.SearchCountdown, Is.Zero);
 				Assert.That(playback.Time, Is.EqualTo(0.7f));
 				Assert.That(playback.Revision, Is.EqualTo(9u));
-				Assert.That(manager.GetComponentData<MmdSearchSettings>(disabled).RequiredTags, Is.EqualTo(32u));
-				Assert.That(manager.GetComponentData<MmdSearchSettings>(other).RequiredTags, Is.EqualTo(32u));
+				Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(disabled), MmdMotionGroupUsage.Required), Is.EqualTo(32));
+				Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(other), MmdMotionGroupUsage.Required), Is.EqualTo(32));
 				world.SetPaused(true);
 				world.SetInput(new MmdSampleInput { Movement = new float2(1f, 0f), Run = !run });
 				world.Tick();
-				Assert.That(manager.GetComponentData<MmdSearchSettings>(controlled).RequiredTags, Is.EqualTo(tags));
+				Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(controlled), MmdMotionGroupUsage.Required), Is.EqualTo(group));
 			}
 		}
 
-		[TestCase(5f, 4u, 1f)]
-		[TestCase(3f, 4u, 0.6f)]
-		[TestCase(1f, 2u, 0.5f)]
-		[TestCase(0f, 1u, 1f)]
-		public void ReachableSpeedSelectsGaitAndLimitsPlaybackTempo(float reachableSpeed, uint tags, float tempo) {
+		[TestCase(5f, 4, 1f)]
+		[TestCase(3f, 4, 0.6f)]
+		[TestCase(1f, 2, 0.5f)]
+		[TestCase(0f, 1, 1f)]
+		public void ReachableSpeedSelectsGaitAndLimitsPlaybackTempo(float reachableSpeed, int group, float tempo) {
 			using (var sample = new MmdSampleWorld(1f / 60f)) {
 				var manager = sample.World.EntityManager;
 				var character = sample.Characters.Create(default, true, LocalTransform.Identity);
 				manager.AddComponent<MmdSampleMovement>(character);
 				manager.AddComponentData(character, new MmdActionRequest { PreferredClip = -1 });
-				manager.AddComponentData(character, new MmdSampleCharacterControl { WalkSpeed = 2f, RunSpeed = 5f, IdleTags = 1, WalkTags = 2, RunTags = 4 });
+				manager.AddComponentData(character, new MmdSampleCharacterControl { WalkSpeed = 2f, RunSpeed = 5f, IdleGroup = 1, WalkGroup = 2, RunGroup = 4 });
 				manager.AddComponent<MmdSearchSettings>(character);
 				manager.AddComponentData(character, new MmdPlayback { Speed = 1f });
 				manager.SetComponentData(character, new ColInt.MMD.Physics.Components.MmdTrajectoryEnvironment {
@@ -158,7 +166,7 @@ namespace ColInt.MMD.Tests {
 				});
 				sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Run = true });
 				sample.Tick();
-				Assert.That(manager.GetComponentData<MmdSearchSettings>(character).RequiredTags, Is.EqualTo(tags));
+				Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(character), MmdMotionGroupUsage.Required), Is.EqualTo(group));
 				Assert.That(manager.GetComponentData<MmdPlayback>(character).Speed, Is.EqualTo(tempo).Within(0.00001f));
 			}
 		}
@@ -170,13 +178,13 @@ namespace ColInt.MMD.Tests {
 				var character = sample.Characters.Create(default, true, LocalTransform.Identity);
 				manager.AddComponent<MmdSampleMovement>(character);
 				manager.AddComponentData(character, new MmdActionRequest { PreferredClip = -1 });
-				manager.AddComponentData(character, new MmdSampleCharacterControl { WalkSpeed = 2f, RunSpeed = 5f, IdleTags = 1, WalkTags = 2, RunTags = 4 });
+				manager.AddComponentData(character, new MmdSampleCharacterControl { WalkSpeed = 2f, RunSpeed = 5f, IdleGroup = 1, WalkGroup = 2, RunGroup = 4 });
 				manager.AddComponent<MmdSearchSettings>(character);
 				manager.AddComponentData(character, new MmdPlayback { Speed = 1f });
 				manager.SetComponentData(character, new ColInt.MMD.Physics.Components.MmdTrajectoryEnvironment { MaximumSpeed = 0.2f, MovementFraction = 0.8f });
 				sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Run = true });
 				sample.Tick();
-				Assert.That(manager.GetComponentData<MmdSearchSettings>(character).RequiredTags, Is.EqualTo(4u));
+				Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(character), MmdMotionGroupUsage.Required), Is.EqualTo(4));
 				Assert.That(manager.GetComponentData<MmdPlayback>(character).Speed, Is.EqualTo(0.8f).Within(0.00001f));
 			}
 		}
@@ -189,29 +197,31 @@ namespace ColInt.MMD.Tests {
 				manager.AddComponent<MmdSampleMovement>(character);
 				manager.AddComponentData(character, new MmdActionRequest { PreferredClip = -1 });
 				manager.AddComponentData(character, new MmdSampleCharacterControl {
-					WalkSpeed = 2f, RunSpeed = 5f, TurnSpeed = 4.5f, IdleTags = 1, WalkTags = 2, RunTags = 4, TurnTags = 8
+					WalkSpeed = 2f, RunSpeed = 5f, TurnSpeed = 4.5f, IdleGroup = 1, WalkGroup = 2, RunGroup = 4, TurnGroup = 8
 				});
-				manager.AddComponentData(character, new MmdSearchSettings { RequiredTags = 1 });
+				manager.AddComponentData(character, new MmdSearchSettings());
+				MmdMotionGroups.Set(manager.GetBuffer<MmdMotionGroup>(character), MmdMotionGroupUsage.Required, 1);
+				MmdMotionGroups.Set(manager.GetBuffer<MmdMotionGroup>(character), MmdMotionGroupUsage.Excluded, 0);
 				manager.AddComponentData(character, new MmdPlayback { Speed = 0.3f });
 				manager.SetComponentData(character, new ColInt.MMD.Physics.Components.MmdTrajectoryEnvironment { MaximumSpeed = 0f, MovementFraction = 0f });
 				sample.SetInput(new MmdSampleInput { Movement = new float2(1f, 0f), Run = true });
 				sample.Tick();
-				Assert.That(manager.GetComponentData<MmdSearchSettings>(character).RequiredTags, Is.EqualTo(8u));
+				Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(character), MmdMotionGroupUsage.Required), Is.EqualTo(8));
 				Assert.That(manager.GetComponentData<MmdPlayback>(character).Speed, Is.EqualTo(1f));
 				manager.SetComponentData(character, LocalTransform.FromRotation(quaternion.RotateY(math.PI * 0.5f - 0.1f)));
 				manager.SetComponentData(character, new ColInt.MMD.Physics.Components.MmdTrajectoryEnvironment { MaximumSpeed = float.PositiveInfinity, MovementFraction = 1f });
 				sample.Tick();
-				Assert.That(manager.GetComponentData<MmdSearchSettings>(character).RequiredTags, Is.EqualTo(8u), "A clear future path must not interrupt the turn before alignment.");
+				Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(character), MmdMotionGroupUsage.Required), Is.EqualTo(8), "A clear future path must not interrupt the turn before alignment.");
 				manager.SetComponentData(character, LocalTransform.FromRotation(quaternion.RotateY(math.PI * 0.5f - 0.01f)));
 				sample.Tick();
-				Assert.That(manager.GetComponentData<MmdSearchSettings>(character).RequiredTags, Is.EqualTo(4u));
+				Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(character), MmdMotionGroupUsage.Required), Is.EqualTo(4));
 				manager.SetComponentData(character, LocalTransform.Identity);
 				manager.SetComponentData(character, new ColInt.MMD.Physics.Components.MmdTrajectoryEnvironment { MaximumSpeed = 0f, MovementFraction = 0f });
 				sample.Tick();
-				Assert.That(manager.GetComponentData<MmdSearchSettings>(character).RequiredTags, Is.EqualTo(8u));
+				Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(character), MmdMotionGroupUsage.Required), Is.EqualTo(8));
 				sample.SetInput(default);
 				sample.Tick();
-				Assert.That(manager.GetComponentData<MmdSearchSettings>(character).RequiredTags, Is.EqualTo(1u));
+				Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(character), MmdMotionGroupUsage.Required), Is.EqualTo(1));
 			}
 		}
 
@@ -222,8 +232,10 @@ namespace ColInt.MMD.Tests {
 				var character = sample.Characters.Create(default, true, LocalTransform.Identity);
 				manager.AddComponent<MmdSampleMovement>(character);
 				manager.AddComponentData(character, new MmdActionRequest { PreferredClip = -1 });
-				manager.AddComponentData(character, new MmdSampleCharacterControl { WalkSpeed = 2f, RunSpeed = 5f, IdleTags = 1, WalkTags = 2, RunTags = 4 });
-				manager.AddComponentData(character, new MmdSearchSettings { RequiredTags = 2 });
+				manager.AddComponentData(character, new MmdSampleCharacterControl { WalkSpeed = 2f, RunSpeed = 5f, IdleGroup = 1, WalkGroup = 2, RunGroup = 4 });
+				manager.AddComponentData(character, new MmdSearchSettings());
+				MmdMotionGroups.Set(manager.GetBuffer<MmdMotionGroup>(character), MmdMotionGroupUsage.Required, 2);
+				MmdMotionGroups.Set(manager.GetBuffer<MmdMotionGroup>(character), MmdMotionGroupUsage.Excluded, 0);
 				manager.AddComponentData(character, new MmdPlayback { Speed = 1f });
 				sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Run = true });
 				float[] fractions = { 0.59f, 0.61f, 0.59f, 0.5f, 0.45f, 0.43f, 0.45f, 0.59f };
@@ -233,7 +245,7 @@ namespace ColInt.MMD.Tests {
 						MaximumSpeed = fractions[step] * 5f, MovementFraction = fractions[step]
 					});
 					sample.Tick();
-					Assert.That(manager.GetComponentData<MmdSearchSettings>(character).RequiredTags, Is.EqualTo(expected[step]));
+					Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(character), MmdMotionGroupUsage.Required), Is.EqualTo(expected[step]));
 				}
 			}
 		}
@@ -245,14 +257,16 @@ namespace ColInt.MMD.Tests {
 				var character = sample.Characters.Create(default, true, LocalTransform.Identity);
 				manager.AddComponent<MmdSampleMovement>(character);
 				manager.AddComponentData(character, new MmdActionRequest { PreferredClip = -1 });
-				manager.AddComponentData(character, new MmdSampleCharacterControl { WalkSpeed = 2f, IdleTags = 1, WalkTags = 2 });
-				manager.AddComponentData(character, new MmdSearchSettings { RequiredTags = 8 });
+				manager.AddComponentData(character, new MmdSampleCharacterControl { WalkSpeed = 2f, IdleGroup = 1, WalkGroup = 2 });
+				manager.AddComponentData(character, new MmdSearchSettings());
+				MmdMotionGroups.Set(manager.GetBuffer<MmdMotionGroup>(character), MmdMotionGroupUsage.Required, 8);
+				MmdMotionGroups.Set(manager.GetBuffer<MmdMotionGroup>(character), MmdMotionGroupUsage.Excluded, 0);
 				manager.AddComponentData(character, new MmdPlayback { Speed = 0.75f });
 				manager.SetComponentData(character, new MmdActionState { ActionId = 7 });
 				manager.SetComponentData(character, new ColInt.MMD.Physics.Components.MmdTrajectoryEnvironment { MaximumSpeed = 0f });
 				sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f) });
 				sample.Tick();
-				Assert.That(manager.GetComponentData<MmdSearchSettings>(character).RequiredTags, Is.EqualTo(8u));
+				Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(character), MmdMotionGroupUsage.Required), Is.EqualTo(8));
 				Assert.That(manager.GetComponentData<MmdPlayback>(character).Speed, Is.EqualTo(0.75f));
 			}
 		}
@@ -264,8 +278,10 @@ namespace ColInt.MMD.Tests {
 				Entity character = world.Characters.Create(default, true, LocalTransform.Identity);
 				manager.AddComponent<MmdSampleMovement>(character);
 				manager.AddComponentData(character, new MmdActionRequest { PreferredClip = -1 });
-				manager.AddComponentData(character, new MmdSampleCharacterControl { IdleTags = 1 });
-				manager.AddComponentData(character, new MmdSearchSettings { RequiredTags = 1 });
+				manager.AddComponentData(character, new MmdSampleCharacterControl { IdleGroup = 1 });
+				manager.AddComponentData(character, new MmdSearchSettings());
+				MmdMotionGroups.Set(manager.GetBuffer<MmdMotionGroup>(character), MmdMotionGroupUsage.Required, 1);
+				MmdMotionGroups.Set(manager.GetBuffer<MmdMotionGroup>(character), MmdMotionGroupUsage.Excluded, 0);
 				manager.AddComponentData(character, new MmdPlayback { SearchCountdown = 1f });
 				world.Tick();
 				Assert.That(manager.GetComponentData<MmdPlayback>(character).SearchCountdown, Is.EqualTo(1f));
@@ -333,7 +349,7 @@ namespace ColInt.MMD.Tests {
 				Entity other = world.Characters.Create(MotionDatabaseBuilder.Build(MotionDatabaseFixture.Create()), true, LocalTransform.Identity);
 				var manager = world.World.EntityManager;
 				manager.AddComponent<MmdSampleMovement>(controlled);
-				manager.AddComponentData(controlled, new MmdSampleCharacterControl { WalkSpeed = 1f, RunSpeed = 2f, TurnSpeed = 1f, WalkTags = 2, RunTags = 2 });
+				manager.AddComponentData(controlled, new MmdSampleCharacterControl { WalkSpeed = 1f, RunSpeed = 2f, TurnSpeed = 1f, WalkGroup = 2, RunGroup = 2 });
 				world.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f) });
 				world.Tick();
 
@@ -362,28 +378,30 @@ namespace ColInt.MMD.Tests {
 				manager.AddComponent<MmdSampleMovement>(actor);
 				manager.AddComponentData(actor, new MmdActionRequest { PreferredClip = -1 });
 				manager.AddComponentData(actor, new MmdSampleCharacterControl {
-					WalkSpeed = 2f, RunSpeed = 5f, TurnSpeed = 4.5f, IdleTags = 1, WalkTags = 2, RunTags = 4, TurnTags = 8, StartTags = 64
+					WalkSpeed = 2f, RunSpeed = 5f, TurnSpeed = 4.5f, IdleGroup = 1, WalkGroup = 2, RunGroup = 4, TurnGroup = 8, StartGroup = 64
 				});
-				manager.AddComponentData(actor, new MmdSearchSettings { RequiredTags = 1, ExcludedTags = 32, MinimumTransitionTime = 0.2f });
+				manager.AddComponentData(actor, new MmdSearchSettings { MinimumTransitionTime = 0.2f });
+				MmdMotionGroups.Set(manager.GetBuffer<MmdMotionGroup>(actor), MmdMotionGroupUsage.Required, 1);
+				MmdMotionGroups.Set(manager.GetBuffer<MmdMotionGroup>(actor), MmdMotionGroupUsage.Excluded, 32);
 				manager.AddComponentData(actor, new MmdPlayback { Speed = 1f });
 				sample.SetInput(new MmdSampleInput { Movement = new float2(0f, -1f), Run = run });
 				sample.Tick();
-				uint gait = run ? 4u : 2u;
+				int gait = run ? 4 : 2;
 				var settings = manager.GetComponentData<MmdSearchSettings>(actor);
-				Assert.That(settings.RequiredTags, Is.EqualTo(gait | 64u));
-				Assert.That(settings.ExcludedTags, Is.EqualTo(32u));
+				Assert.That(MmdMotionGroups.Is(manager.GetBuffer<MmdMotionGroup>(actor), MmdMotionGroupUsage.Required, gait, 64), Is.True);
+				Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(actor), MmdMotionGroupUsage.Excluded), Is.EqualTo(32));
 				manager.SetComponentData(actor, LocalTransform.FromRotation(quaternion.RotateY(math.PI)));
 				manager.SetComponentData(actor, new MmdSampleTrajectoryState { Velocity = new float3(0f, 0f, run ? -5f : -2f) });
 				manager.SetComponentData(actor, new MmdPlayback { Speed = 1f, TransitionElapsed = 0.3f });
 				sample.Tick();
 				settings = manager.GetComponentData<MmdSearchSettings>(actor);
-				Assert.That(settings.RequiredTags, Is.EqualTo(gait));
-				Assert.That(settings.ExcludedTags, Is.EqualTo(32u | 64u));
+				Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(actor), MmdMotionGroupUsage.Required), Is.EqualTo(gait));
+				Assert.That(MmdMotionGroups.Is(manager.GetBuffer<MmdMotionGroup>(actor), MmdMotionGroupUsage.Excluded, 32, 64), Is.True);
 				sample.SetInput(default);
 				sample.Tick();
 				settings = manager.GetComponentData<MmdSearchSettings>(actor);
-				Assert.That(settings.RequiredTags, Is.EqualTo(1u));
-				Assert.That(settings.ExcludedTags, Is.EqualTo(32u), "Idle releases only the Sample-owned start exclusion.");
+				Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(actor), MmdMotionGroupUsage.Required), Is.EqualTo(1));
+				Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(actor), MmdMotionGroupUsage.Excluded), Is.EqualTo(32), "Idle releases only the Sample-owned start exclusion.");
 			}
 		}
 
@@ -432,7 +450,7 @@ namespace ColInt.MMD.Tests {
 				Entity character = world.Characters.Create(MotionDatabaseBuilder.Build(MotionDatabaseFixture.Create()), true, spawn);
 				var manager = world.World.EntityManager;
 				manager.AddComponent<MmdSampleMovement>(character);
-				manager.AddComponentData(character, new MmdSampleCharacterControl { WalkSpeed = 1f, TurnSpeed = 2f, WalkTags = 2 });
+				manager.AddComponentData(character, new MmdSampleCharacterControl { WalkSpeed = 1f, TurnSpeed = 2f, WalkGroup = 2 });
 				world.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f) });
 				world.Tick();
 				var space = manager.GetComponentData<MmdSearchQuerySpace>(character);

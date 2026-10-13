@@ -33,7 +33,7 @@ Burst, Mathematics, Newtonsoft JSON, Input System и URP указаны в `pack
 2. Создайте `MotionBakeConfiguration`: укажите целевой rig, пути корня/стоп, группы и клипы. Для обычного поиска выберите **Motion Matching**, для запуска отдельным запросом — **Action**.
 3. Нажмите **Bake Database** в инспекторе. Укажите путь к `.bytes` внутри `Assets`. В проекте разработки можно запекать прямо в Sample: `Assets/Packages/com.collint.mmd/Samples/Databases/Locomotion.bytes`. При установке из Git сохраняйте собственные базы и конфигурации в `Assets`.
 
-Группы задаются именами; числовые маски и Action ID генерируются автоматически. Максимум — 32 группы. База запекается под целевой скелет; персонажи с этим скелетом могут совместно использовать один BlobAsset. Ретаргетинг Humanoid выполняется при запекании. В **Bake Settings → Normalization Groups** можно закрепить группы для расчёта весов поиска; пустой список использует все клипы.
+Группы задаются именами; идентификаторы групп и Action ID генерируются автоматически. Количество групп не ограничено размером битовой маски. Клип может входить в несколько групп; их принадлежность хранится один раз на клип. База запекается под целевой скелет; персонажи с этим скелетом могут совместно использовать один BlobAsset. Ретаргетинг Humanoid выполняется при запекании. В **Bake Settings → Normalization Groups** можно закрепить группы для расчёта весов поиска; пустой список использует все клипы.
 
 ## Подключение к своему миру
 
@@ -60,7 +60,8 @@ Installers находятся в `ColInt.MMD.Lifecycle.Helpers`, `.Physics.Helpe
 | --- | --- |
 | `Lifecycle / MmdWorldState` | Singleton мира; `IsPaused` останавливает анимационную симуляцию. |
 | `Database / MmdDatabase` | Ссылка `Value` на общую базу персонажа. |
-| `MotionMatching / MmdSearchSettings` | Частота поиска, маски `RequiredTags` / `ExcludedTags`, штраф переключения и ограничения переходов. `PreferLoop` предпочитает цикл, если в выбранной группе есть подходящий; иначе остаются доступны обычные клипы. `TrajectoryPositionWeight` усиливает приоритет позиций будущего пути (0 и 1 — обычный вес); `TrajectoryDirectionWeight` — его направления. |
+| `MotionMatching / MmdSearchSettings` | Частота поиска, штраф переключения и ограничения переходов. Фильтры групп задаются в отдельном буфере `MmdMotionGroup`. `PreferLoop` предпочитает цикл, если в выбранной группе есть подходящий; иначе остаются доступны обычные клипы. `TrajectoryPositionWeight` усиливает приоритет позиций будущего пути (0 и 1 — обычный вес); `TrajectoryDirectionWeight` — его направления. |
+| `MotionMatching / MmdMotionGroup` (буфер) | Каждый элемент хранит три `ulong`: `Required`, `Excluded`, `StationaryPose`. Индекс буфера выбирает блок из 64 групп, ID 1 соответствует биту 0. Меняйте фильтры через `MmdMotionGroups.Set/Add/Remove`, передавая ID и назначение. Клип должен входить во все обязательные группы и ни в одну исключённую. Пустой фильтр разрешает все клипы Motion Matching. Размер буфера растёт по мере необходимости: 1000 групп — 16 слов для каждого назначения. Runtime-база тоже хранит маски `ulong`; в файле остаются компактные списки ID, преобразуемые при загрузке. |
 | `MotionMatching / MmdSearchQueryElement` (буфер) | Вектор поиска, который игровая система обновляет перед MMD. |
 | `Playback / MmdPlayback` | Текущий клип, время, скорость и revision; обычно изменяется системами MMD. |
 | `Playback / MmdLocalPose` (буфер) | Выходная локальная поза костей. |
@@ -68,7 +69,7 @@ Installers находятся в `ColInt.MMD.Lifecycle.Helpers`, `.Physics.Helpe
 | `Actions / MmdActionRequest`, `MmdActionState`, `MmdActionWarp` | Запрос действия, результат и необязательная подгонка root motion к целевой точке. Добавьте все три и для обычного playback; `ActionId = 0`, `PreferredClip = -1`, warp выключен. |
 | `Lifecycle / MmdFault` | Результат проверки запроса/поиска, в том числе отсутствие кандидатов. |
 | `Presentation / MmdSkeletonBone`, `MmdModelMatrix` (буферы) | Иерархия костей и вычисляемые модельные матрицы для рендера. |
-| `Playback / MmdInertialization`, `MmdInertializationState`, `MmdInertialPose` (буфер) | Необязательное сглаживание. Добавьте вместе; задайте `PoseDuration`, `StationaryPoseDuration`, `RootDuration` в секундах. `StationaryPoseTags` — маска групп idle для сохранения положения стоп; `0` отключает выравнивание. Не включайте сюда воздушные клипы. |
+| `Playback / MmdInertialization`, `MmdInertializationState`, `MmdInertialPose` (буфер) | Необязательное сглаживание. Добавьте вместе; задайте `PoseDuration`, `StationaryPoseDuration`, `RootDuration` в секундах. В буфере `MmdMotionGroup` отметьте группы idle назначением `StationaryPose`; без таких записей выравнивание отключено. Не включайте сюда воздушные клипы. |
 | `RootMotion / MmdKinematicRoot` | Прямое применение root motion к `LocalTransform`. |
 | `Physics / MmdPhysicsRoot` | Применение root motion через `PhysicsVelocity`; нужны компоненты физического тела. Выберите один способ движения. |
 | `Physics / MmdGroundMovement`, `MmdTrajectoryEnvironment` | Необязательная обработка поверхности, ступеней и препятствий; требует collider персонажа и мировой физики. |
@@ -84,11 +85,16 @@ Installers находятся в `ColInt.MMD.Lifecycle.Helpers`, `.Physics.Helpe
 Разрешайте группы по имени из текущей базы, например:
 
 ```csharp
-settings.RequiredTags = MotionDatabaseGroups.GetTags(
+var groups = entityManager.GetBuffer<MmdMotionGroup>(character);
+int run = MotionDatabaseGroups.GetId(
     ref database.Value, new FixedString64Bytes("Run"));
+MmdMotionGroups.Set(groups, MmdMotionGroupUsage.Required, run);
+// Для пересечения групп вызовите Add с Required для другого ID.
 ```
 
-Не сохраняйте сгенерированные ID между запеканиями. Для немедленного поиска после изменения намерения установите `MmdPlayback.SearchCountdown = 0f`; для прерывания удержания перехода — также `TransitionElapsed = settings.MinimumTransitionTime`.
+Добавьте буфер `MmdMotionGroup` на сущность вместе с компонентами поиска. `Set` меняет только выбранное назначение, сохраняя остальные; `Add` и `Remove` изменяют отдельную группу. Не сохраняйте сгенерированные ID между запеканиями. Формат базы — 6; после обновления пакета свои базы нужно перепечь. `BitMask` — не владеющее памятью представление над `NativeArray<ulong>` для `And`, `Or`, `Xor`, `AndNot`, `Not`, `Intersects` и `ContainsAll`. Операции меняют переданное хранилище без выделений памяти; его размер и освобождение задаёт владелец. Нумерация битов в `BitMask` начинается с 0, ID групп — с 1. Готовую маску можно передать в `MmdMotionGroups.Set(groups, usage, mask)`, `Add(groups, mask, usage)` (OR) и `Remove(groups, mask, usage)` (AND NOT).
+
+Для немедленного поиска после изменения намерения установите `MmdPlayback.SearchCountdown = 0f`; для прерывания удержания перехода — также `TransitionElapsed = settings.MinimumTransitionTime`.
 
 Для отдельного действия заполните `MmdActionRequest.ActionId` через `MotionDatabaseGroups.GetActionId`, задайте `PreferredClip = -1` и увеличьте `Revision`. Читайте `MmdActionState.Completed` / `Rejected`. Возврат к Motion Matching выполняется новым запросом с `ActionId = 0` и новой revision; игровые состояния переключает проект.
 

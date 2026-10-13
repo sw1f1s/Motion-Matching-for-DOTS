@@ -1,3 +1,5 @@
+using ColInt.MMD.MotionMatching.Helpers;
+using ColInt.MMD.MotionMatching.Data;
 using ColInt.MMD.Actions.Components;
 using ColInt.MMD.Database.Components;
 using ColInt.MMD.Database.Data;
@@ -44,23 +46,23 @@ namespace ColInt.MMD.Samples.Character.Movement.SlideState.Systems {
 				ref MmdSampleMovement movement,
 				ref MmdActionRequest request,
 				ref MmdSearchSettings settings,
-				ref MmdPlayback playback, in DynamicBuffer<MmdSearchQueryElement> query) {
+				ref MmdPlayback playback, in DynamicBuffer<MmdSearchQueryElement> query, DynamicBuffer<MmdMotionGroup> groups) {
 				progress.Velocity = float3.zero;
 				movement = new MmdSampleMovement { CrouchCollider = true };
 				control.WalkSpeed = crouch.Speed;
 				control.RunSpeed = crouch.Speed;
 				control.SprintSpeed = crouch.Speed;
-				control.IdleTags = crouch.IdleTags;
-				control.WalkTags = crouch.MoveTags;
-				control.RunTags = crouch.MoveTags;
-				control.SprintTags = crouch.MoveTags;
-				control.TurnTags = crouch.TurnTags;
-				control.StartTags = crouch.StartTags;
+				control.IdleGroup = crouch.IdleGroup;
+				control.WalkGroup = crouch.MoveGroup;
+				control.RunGroup = crouch.MoveGroup;
+				control.SprintGroup = crouch.MoveGroup;
+				control.TurnGroup = crouch.TurnGroup;
+				control.StartGroup = crouch.StartGroup;
 				MmdSampleAnimationRequest.Cancel(ref request);
-				settings.RequiredTags = slide.MotionTags;
-				settings.ExcludedTags = 0;
+				MmdMotionGroups.Set(groups, MmdMotionGroupUsage.Required, slide.MotionGroup);
+				MmdMotionGroups.Set(groups, MmdMotionGroupUsage.Excluded, 0);
 				settings.PreferLoop = false;
-				int exit = SelectExit(ref data.Value.Value, slide.MotionTags, query);
+				int exit = SelectExit(ref data.Value.Value, slide.MotionGroup, query);
 				playback.ClipIndex = exit;
 				playback.Time = 0f;
 				playback.Speed = 1f;
@@ -68,12 +70,12 @@ namespace ColInt.MMD.Samples.Character.Movement.SlideState.Systems {
 				playback.Revision++;
 			}
 
-			private static int SelectExit(ref MotionDatabase database, uint tags, in DynamicBuffer<MmdSearchQueryElement> query) {
+			private static int SelectExit(ref MotionDatabase database, int group, in DynamicBuffer<MmdSearchQueryElement> query) {
 				float best = float.PositiveInfinity;
 				int selected = -1;
 				for (int clip = 0; clip < database.Clips.Length; clip++) {
 					ref var candidate = ref database.Clips[clip];
-					if (candidate.Loop || candidate.ActionId != 0 || (candidate.Tags & tags) == 0) {
+					if (candidate.Loop || candidate.ActionId != 0 || !ColInt.MMD.Database.Helpers.MotionDatabaseGroups.Contains(ref database, candidate, group)) {
 						continue;
 					}
 					float cost = 0f;

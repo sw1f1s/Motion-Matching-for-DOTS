@@ -8,8 +8,14 @@ namespace ColInt.MMD.Tests {
 			const int samples = 11;
 			var source = new MotionDatabaseSource {
 				FeatureCount = LocomotionSchema.Dimension,
+				Groups = new[] {
+					new MotionGroup { Name = new Unity.Collections.FixedString64Bytes("Idle"), Id = 1 },
+					new MotionGroup { Name = new Unity.Collections.FixedString64Bytes("Walk"), Id = 2 },
+					new MotionGroup { Name = new Unity.Collections.FixedString64Bytes("Action"), Id = 4, ActionId = 7 },
+					new MotionGroup { Name = new Unity.Collections.FixedString64Bytes("Other"), Id = 8 }
+				},
 				Parents = new[] { -1, 0 }, BoneNameHashes = new[] { 1, 2 },
-				Clips = new MotionClip[3], Frames = new MotionFrame[samples * 3],
+				Clips = new MotionClipSource[3], Frames = new MotionFrame[samples * 3],
 				Poses = new JointPose[samples * 3 * 2], Features = new float[samples * 3 * LocomotionSchema.Dimension],
 				FeatureScales = new float[LocomotionSchema.Dimension]
 			};
@@ -17,9 +23,9 @@ namespace ColInt.MMD.Tests {
 				source.FeatureScales[feature] = 1f;
 			}
 			for (int clip = 0; clip < 3; clip++) {
-				source.Clips[clip] = new MotionClip {
+				source.Clips[clip] = new MotionClipSource {
 					FirstFrame = clip * samples, FrameCount = samples, SampleRate = 10f, Duration = 1f,
-					Loop = clip != 2, ActionId = clip == 2 ? 7 : 0, Tags = (uint)(1 << clip)
+					Loop = clip != 2, ActionId = clip == 2 ? 7 : 0, Groups = new[] { 1 << clip }
 				};
 				for (int sample = 0; sample < samples; sample++) {
 					int frame = clip * samples + sample;

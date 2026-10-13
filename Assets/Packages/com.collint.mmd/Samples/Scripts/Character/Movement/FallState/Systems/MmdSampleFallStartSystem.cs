@@ -1,3 +1,6 @@
+using Unity.Burst;
+using ColInt.MMD.MotionMatching.Helpers;
+using ColInt.MMD.MotionMatching.Data;
 using ColInt.MMD.Actions.Components;
 using ColInt.MMD.Lifecycle.Components;
 using ColInt.MMD.MotionMatching.Components;
@@ -22,17 +25,21 @@ namespace ColInt.MMD.Samples.Character.Movement.FallState.Systems {
 			if (SystemAPI.GetSingleton<MmdWorldState>().IsPaused) {
 				return;
 			}
-			foreach (var (fall, velocity, movement, request, settings, playback, ground) in
-				SystemAPI.Query<RefRO<MmdSampleFall>, RefRO<PhysicsVelocity>, RefRW<MmdSampleMovement>, RefRW<MmdActionRequest>,
-					RefRW<MmdSearchSettings>, RefRW<MmdPlayback>, RefRW<MmdSampleGroundState>>().WithAll<MmdSampleStateStarted<MmdSampleFall>>()) {
-				movement.ValueRW = new MmdSampleMovement { IgnoreGround = true, AirControl = true, AirVelocity = velocity.ValueRO.Linear.xz };
-				ground.ValueRW.MaximumDownwardSpeed = math.max(0f, -velocity.ValueRO.Linear.y);
-				MmdSampleAnimationRequest.Cancel(ref request.ValueRW);
-				settings.ValueRW.RequiredTags = fall.ValueRO.Tags;
-				settings.ValueRW.ExcludedTags = 0;
-				playback.ValueRW.Speed = 1f;
-				playback.ValueRW.SearchCountdown = 0f;
-				playback.ValueRW.TransitionElapsed = settings.ValueRO.MinimumTransitionTime;
+			state.Dependency = new StartJob().ScheduleParallel(state.Dependency);
+		}
+
+		[BurstCompile]
+		[WithAll(typeof(MmdSampleStateStarted<MmdSampleFall>))]
+		private partial struct StartJob : IJobEntity {
+			private void Execute(in MmdSampleFall fall, in PhysicsVelocity velocity, ref MmdSampleMovement movement, ref MmdActionRequest request, ref MmdSearchSettings settings, ref MmdPlayback playback, ref MmdSampleGroundState ground, DynamicBuffer<MmdMotionGroup> groups) {
+				movement = new MmdSampleMovement { IgnoreGround = true, AirControl = true, AirVelocity = velocity.Linear.xz };
+				ground.MaximumDownwardSpeed = math.max(0f, -velocity.Linear.y);
+				MmdSampleAnimationRequest.Cancel(ref request);
+				MmdMotionGroups.Set(groups, MmdMotionGroupUsage.Required, fall.Group);
+				MmdMotionGroups.Set(groups, MmdMotionGroupUsage.Excluded, 0);
+				playback.Speed = 1f;
+				playback.SearchCountdown = 0f;
+				playback.TransitionElapsed = settings.MinimumTransitionTime;
 			}
 		}
 	}

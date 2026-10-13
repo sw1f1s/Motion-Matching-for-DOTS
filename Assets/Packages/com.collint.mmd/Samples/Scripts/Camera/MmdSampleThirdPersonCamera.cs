@@ -3,7 +3,6 @@ using System;
 using ColInt.MMD.Samples.Character.Spawning;
 using ColInt.MMD.Samples.Lifecycle;
 using Unity.Transforms;
-using UnityEngine.InputSystem;
 using UnityEngine;
 
 namespace ColInt.MMD.Samples.Camera {
@@ -62,25 +61,20 @@ namespace ColInt.MMD.Samples.Camera {
 			_pitch = 0f;
 		}
 
-		private void Update() {
+		public void ApplyInput(Unity.Mathematics.float2 look, bool releaseCursor, bool captureCursor) {
 			if (_sample == null) {
 				return;
 			}
-			Mouse mouse = Mouse.current;
-			Keyboard keyboard = Keyboard.current;
-			if (Application.isFocused && mouse != null) {
-				if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame) {
-					Cursor.lockState = CursorLockMode.None;
-					Cursor.visible = true;
-				} else if (Cursor.lockState != CursorLockMode.Locked) {
-					if (mouse.leftButton.wasPressedThisFrame) {
-						CaptureCursor();
-					}
-				} else {
-					Vector2 delta = mouse.delta.ReadValue();
-					_yaw = Mathf.Repeat(_yaw + delta.x * _mouseSensitivity, 360f);
-					_pitch = Mathf.Clamp(_pitch - delta.y * _mouseSensitivity, -20f, 70f);
+			if (releaseCursor) {
+				Cursor.lockState = CursorLockMode.None;
+				Cursor.visible = true;
+			} else if (Cursor.lockState != CursorLockMode.Locked) {
+				if (captureCursor) {
+					CaptureCursor();
 				}
+			} else {
+				_yaw = Mathf.Repeat(_yaw + look.x * _mouseSensitivity, 360f);
+				_pitch = Mathf.Clamp(_pitch - look.y * _mouseSensitivity, -20f, 70f);
 			}
 		}
 

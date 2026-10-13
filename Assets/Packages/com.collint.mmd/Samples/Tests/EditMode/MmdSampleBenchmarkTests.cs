@@ -63,7 +63,7 @@ namespace ColInt.MMD.Tests {
 				Assert.That(manager.GetComponentData<MmdSampleBenchmarkAgent>(distant).Target, Is.EqualTo(new float3(12f, 0f, -5f)));
 				Assert.That(manager.GetComponentData<MmdSampleBenchmarkAgent>(distant).CompletedTargets, Is.Zero);
 				Assert.That(manager.GetComponentData<MmdSampleBenchmarkAgent>(disabled).CompletedTargets, Is.Zero);
-				var input = manager.GetComponentData<MmdSampleCharacterInputOverride>(arrived).Value;
+				var input = manager.GetComponentData<MmdSampleInput>(arrived);
 				Assert.That(input.Run, Is.True);
 				Assert.That(math.length(input.Movement), Is.EqualTo(1f).Within(0.00001f));
 				Assert.That(input.Facing, Is.EqualTo(input.Movement));
@@ -81,15 +81,15 @@ namespace ColInt.MMD.Tests {
 		}
 
 		[Test]
-		public void IndividualIntentsDriveSeparateTrajectoriesAndPreservePlayerInputFallback() {
+		public void IndividualInputsDriveSeparatePlayerAndBotTrajectories() {
 			using (var sample = new MmdSampleWorld(1f / 60f)) {
 				var manager = sample.World.EntityManager;
 				Entity right = CreateControlledCharacter(sample);
 				Entity left = CreateControlledCharacter(sample);
 				Entity player = CreateControlledCharacter(sample);
-				manager.AddComponentData(right, new MmdSampleCharacterInputOverride { Value = new MmdSampleInput { Movement = new float2(1f, 0f), Run = true } });
-				manager.AddComponentData(left, new MmdSampleCharacterInputOverride { Value = new MmdSampleInput { Movement = new float2(-1f, 0f), Run = true } });
-				sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f) });
+				manager.SetComponentData(right, new MmdSampleInput { Movement = new float2(1f, 0f), Run = true });
+				manager.SetComponentData(left, new MmdSampleInput { Movement = new float2(-1f, 0f), Run = true });
+				manager.SetComponentData(player, new MmdSampleInput { Movement = new float2(0f, 1f) });
 				sample.Tick();
 				Assert.That(manager.GetBuffer<MmdSearchQueryElement>(right)[8].Value, Is.GreaterThan(0f));
 				Assert.That(manager.GetBuffer<MmdSearchQueryElement>(left)[8].Value, Is.LessThan(0f));
@@ -102,7 +102,7 @@ namespace ColInt.MMD.Tests {
 		}
 
 		private static Entity CreateAgent(EntityManager manager, float3 position, float3 target, int index) {
-			Entity entity = manager.CreateEntity(typeof(LocalTransform), typeof(MmdSampleBenchmarkAgent), typeof(MmdSampleCharacterInputOverride));
+			Entity entity = manager.CreateEntity(typeof(LocalTransform), typeof(MmdSampleBenchmarkAgent), typeof(MmdSampleInput));
 			manager.SetComponentData(entity, LocalTransform.FromPosition(position));
 			manager.SetComponentData(entity, new MmdSampleBenchmarkAgent { Random = MmdSampleBenchmarkRandom.CreateStream(12345, index), Target = target });
 			return entity;

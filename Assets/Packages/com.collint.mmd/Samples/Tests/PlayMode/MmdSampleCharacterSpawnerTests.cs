@@ -59,7 +59,7 @@ namespace ColInt.MMD.Tests {
 				Assert.That(manager.GetComponentData<MmdSampleCharacterControl>(a.CharacterEntity).WalkSpeed, Is.EqualTo(1f));
 				Assert.That(manager.HasComponent<MmdSampleCharacterControl>(b.CharacterEntity), Is.False);
 				// Input is world X/Z; this character's local forward points along world +X.
-				bootstrap.SampleWorld.SetInput(new MmdSampleInput { Movement = new float2(1f, 0f) });
+				manager.SetComponentData(a.CharacterEntity, new MmdSampleInput { Movement = new float2(1f, 0f) });
 				bootstrap.SampleWorld.Tick();
 				Assert.That(manager.GetComponentData<LocalTransform>(a.CharacterEntity).Position.x, Is.GreaterThan(3f));
 				Assert.That(manager.GetComponentData<LocalTransform>(b.CharacterEntity).Position.xz, Is.EqualTo(new float2(-2f, 6f)));

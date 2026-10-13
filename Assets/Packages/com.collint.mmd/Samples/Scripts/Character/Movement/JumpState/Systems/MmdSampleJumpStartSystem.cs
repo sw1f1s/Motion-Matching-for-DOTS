@@ -2,6 +2,7 @@ using ColInt.MMD.Actions.Components;
 using ColInt.MMD.Database.Components;
 using ColInt.MMD.Lifecycle.Components;
 using ColInt.MMD.MotionMatching.Components;
+using ColInt.MMD.Samples.Character.Input.Components;
 using ColInt.MMD.Samples.Character.Movement.JumpState.Components;
 using ColInt.MMD.Samples.Character.Movement.Shared.Components;
 using ColInt.MMD.Samples.Character.Movement.Shared.Helpers;
@@ -18,6 +19,7 @@ namespace ColInt.MMD.Samples.Character.Movement.JumpState.Systems {
 	public partial struct MmdSampleJumpStartSystem : ISystem {
 		public void OnCreate(ref SystemState state) {
 			state.RequireForUpdate<MmdWorldState>();
+			state.RequireForUpdate<MmdSampleInput>();
 		}
 
 		public void OnUpdate(ref SystemState state) {
@@ -35,10 +37,13 @@ namespace ColInt.MMD.Samples.Character.Movement.JumpState.Systems {
 		private partial struct StartJob : IJobEntity {
 			public EntityCommandBuffer Commands;
 
-			private void Execute(Entity entity, ref MmdSampleJumpIntent intent, in MmdSampleJump jump,
+			private void Execute(Entity entity, ref MmdSampleInput input, ref MmdSampleJumpIntent intent, in MmdSampleJump jump,
 				in MmdSampleMovementSettings settings, in PhysicsVelocity velocity,
 				ref MmdSampleMovement movement, ref MmdSampleGroundState ground, in MmdDatabase data,
 				ref MmdActionRequest request, ref MmdSampleJumpProgress progress, DynamicBuffer<MmdSearchQueryElement> query) {
+				// Clear the persistent crouch toggle only when the jump is actually entered.
+				input.Crouch = false;
+				input.CrouchPressed = false;
 				movement = new MmdSampleMovement { AirVelocity = velocity.Linear.xz, AirControl = true, IgnoreGround = true };
 				intent.Remaining = 0f;
 				intent.CoyoteRemaining = 0f;

@@ -176,7 +176,7 @@ namespace ColInt.MMD.Tests {
 							manager.AddComponent<MmdSampleMovement>(actor);
 							manager.AddComponentData(actor, new MmdSampleCharacterControl { WalkSpeed = 1f, TurnSpeed = 4.5f, IdleGroup = 1, WalkGroup = 2 });
 						}
-						sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f) });
+						sample.World.EntityManager.SetComponentData(actor, new MmdSampleInput { Movement = new float2(0f, 1f) });
 						bool predictedPastEdge = false;
 						bool fellUnderGravity = false;
 						for (int i = 0; i < 180; i++) {
@@ -211,7 +211,7 @@ namespace ColInt.MMD.Tests {
 						MmdSampleCharacterPhysicsBuilder.Add(manager, actor);
 						manager.AddComponent<MmdSampleMovement>(actor);
 						manager.AddComponentData(actor, new MmdSampleCharacterControl { WalkSpeed = 1f, TurnSpeed = 4.5f, IdleGroup = 1, WalkGroup = 2 });
-						sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f) });
+						sample.World.EntityManager.SetComponentData(actor, new MmdSampleInput { Movement = new float2(0f, 1f) });
 						for (int i = 0; i < 180; i++) {
 							sample.Tick();
 						}
@@ -221,7 +221,7 @@ namespace ColInt.MMD.Tests {
 						Assert.That(math.length(manager.GetComponentData<MmdSampleTrajectoryState>(actor).Velocity.xz), Is.LessThan(0.05f));
 						var points = manager.GetBuffer<MmdTrajectoryPoint>(actor);
 						Assert.That(points[2].Position.z, Is.LessThanOrEqualTo(0.21f));
-						sample.SetInput(new MmdSampleInput { Movement = new float2(0f, -1f) });
+						sample.World.EntityManager.SetComponentData(actor, new MmdSampleInput { Movement = new float2(0f, -1f) });
 						for (int i = 0; i < 360; i++) {
 							sample.Tick();
 						}
@@ -244,7 +244,7 @@ namespace ColInt.MMD.Tests {
 						AddStatic(manager, floor);
 						AddStatic(manager, wall);
 						var actor = sample.Characters.Create(configuration, LocalTransform.Identity, true, false);
-						sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Run = true });
+						sample.World.EntityManager.SetComponentData(actor, new MmdSampleInput { Movement = new float2(0f, 1f), Run = true });
 						for (int i = 0; i < 240; i++) {
 							sample.Tick();
 						}
@@ -298,7 +298,7 @@ namespace ColInt.MMD.Tests {
 					manager.AddComponentData(actor, new MmdActionRequest { PreferredClip = -1 });
 					manager.AddComponentData(actor, new MmdSampleCharacterControl { WalkSpeed = 1f, TurnSpeed = 4.5f });
 					sample.Tick();
-					sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f) });
+					sample.World.EntityManager.SetComponentData(actor, new MmdSampleInput { Movement = new float2(0f, 1f) });
 					sample.Tick();
 					var points = manager.GetBuffer<MmdTrajectoryPoint>(actor);
 					Assert.That(points.Length, Is.EqualTo(3));
@@ -330,7 +330,7 @@ namespace ColInt.MMD.Tests {
 					sample.Tick();
 					manager.SetComponentData(actor, new PhysicsVelocity { Linear = new float3(0f, 0f, initialSpeed) });
 					manager.SetComponentData(actor, new MmdTrajectoryEnvironment { MaximumSpeed = 0f });
-					sample.SetInput(new MmdSampleInput { Movement = new float2(x, z), Run = true });
+					sample.World.EntityManager.SetComponentData(actor, new MmdSampleInput { Movement = new float2(x, z), Run = true });
 					sample.Tick();
 					Assert.That(manager.GetComponentData<MmdTrajectoryEnvironment>(actor).MaximumSpeed, Is.EqualTo(float.PositiveInfinity));
 					Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(actor), MmdMotionGroupUsage.Required), Is.EqualTo(4));
@@ -352,14 +352,14 @@ namespace ColInt.MMD.Tests {
 					var manager = sample.World.EntityManager;
 					AddStatic(manager, floor);
 					var actor = sample.Characters.Create(configuration, LocalTransform.Identity, true, false);
-					sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Run = true });
+					sample.World.EntityManager.SetComponentData(actor, new MmdSampleInput { Movement = new float2(0f, 1f), Run = true });
 					for (int i = 0; i < 180; i++) {
 						sample.Tick();
 					}
 					var movement = new float2(x, z);
 					float previousError = math.abs(ColInt.MMD.Samples.Character.Movement.Facing.Helpers.MmdSampleFacing.YawError(
 						manager.GetComponentData<LocalTransform>(actor).Rotation, movement));
-					sample.SetInput(new MmdSampleInput { Movement = movement, Run = true });
+					sample.World.EntityManager.SetComponentData(actor, new MmdSampleInput { Movement = movement, Run = true });
 					for (int i = 0; i < 180; i++) {
 						sample.Tick();
 						Assert.That(manager.GetComponentData<MmdTrajectoryEnvironment>(actor).MaximumSpeed, Is.EqualTo(float.PositiveInfinity));
@@ -390,14 +390,14 @@ namespace ColInt.MMD.Tests {
 					var manager = sample.World.EntityManager;
 					AddStatic(manager, floor);
 					var actor = sample.Characters.Create(configuration, LocalTransform.Identity, true, false);
-					sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Run = true });
+					sample.World.EntityManager.SetComponentData(actor, new MmdSampleInput { Movement = new float2(0f, 1f), Run = true });
 					for (int i = 0; i < 180; i++) {
 						sample.Tick();
 					}
 					for (int i = 0; i < 360; i++) {
 						float angle = i / 60f * math.PI * 0.5f;
 						var direction = new float2(math.sin(angle), math.cos(angle));
-						sample.SetInput(new MmdSampleInput { Movement = direction, Facing = direction, Run = true });
+						sample.World.EntityManager.SetComponentData(actor, new MmdSampleInput { Movement = direction, Facing = direction, Run = true });
 						sample.Tick();
 						Assert.That(manager.GetComponentData<MmdPlayback>(actor).Speed, Is.EqualTo(1f));
 						Assert.That(MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(actor), MmdMotionGroupUsage.Required), Is.EqualTo(4));

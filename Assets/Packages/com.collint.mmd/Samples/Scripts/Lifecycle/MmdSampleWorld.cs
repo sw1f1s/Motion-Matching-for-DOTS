@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using System;
 using ColInt.MMD.Graphics.Helpers;
 using ColInt.MMD.Lifecycle.Components;
@@ -7,7 +6,6 @@ using ColInt.MMD.Lifecycle.Helpers;
 using ColInt.MMD.Physics.Helpers;
 using ColInt.MMD.Playback.Systems;
 using ColInt.MMD.Samples.Character.Helpers;
-using ColInt.MMD.Samples.Character.Input.Components;
 using ColInt.MMD.Samples.Character.Movement.Shared.Helpers;
 using ColInt.MMD.Samples.Physics.Systems;
 using Unity.Core;
@@ -25,7 +23,6 @@ namespace ColInt.MMD.Samples.Lifecycle {
 		public World World { get; }
 		public float Timestep { get; }
 		public MmdSampleCharacterFactory Characters { get; }
-
 		public MmdSampleWorld(float timestep) {
 			if (!(timestep > 0f) || float.IsInfinity(timestep)) {
 				throw new ArgumentException("A finite positive timestep is required.", nameof(timestep));
@@ -44,7 +41,7 @@ namespace ColInt.MMD.Samples.Lifecycle {
 					}
 				}
 				DefaultWorldInitialization.AddSystemsToRootLevelSystemGroups(World, systems);
-				_stateEntity = World.EntityManager.CreateEntity(typeof(MmdWorldState), typeof(MmdSampleInput), typeof(PhysicsStep));
+				_stateEntity = World.EntityManager.CreateEntity(typeof(MmdWorldState), typeof(PhysicsStep));
 				World.EntityManager.SetComponentData(_stateEntity, PhysicsStep.Default);
 				var fixedStep = World.GetExistingSystemManaged<FixedStepSimulationSystemGroup>();
 				World.GetExistingSystemManaged<SimulationSystemGroup>().RemoveSystemFromUpdateList(fixedStep);
@@ -73,18 +70,6 @@ namespace ColInt.MMD.Samples.Lifecycle {
 		public void SetPaused(bool paused) {
 			ThrowIfDisposed();
 			World.EntityManager.SetComponentData(_stateEntity, new MmdWorldState { IsPaused = paused });
-			if (paused) {
-				var input = World.EntityManager.GetComponentData<MmdSampleInput>(_stateEntity);
-				input.JumpPressed = false;
-				input.CrouchPressed = false;
-				World.EntityManager.SetComponentData(_stateEntity, input);
-			}
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public void SetInput(in MmdSampleInput input) {
-			ThrowIfDisposed();
-			World.EntityManager.SetComponentData(_stateEntity, input);
 		}
 
 		public void Tick() {

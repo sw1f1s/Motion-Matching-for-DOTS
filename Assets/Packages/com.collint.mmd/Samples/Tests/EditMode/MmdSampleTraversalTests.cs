@@ -58,7 +58,7 @@ namespace ColInt.MMD.Tests {
 			Obstacle(height, 3f);
 			CreateCharacter(float3.zero);
 			Advance(30);
-			_sample.SetInput(new MmdSampleInput { JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { JumpPressed = true });
 			_sample.Tick();
 			var manager = _sample.World.EntityManager;
 			Assert.That(manager.HasComponent<MmdSampleTraversalActive>(_character), Is.True);
@@ -79,12 +79,12 @@ namespace ColInt.MMD.Tests {
 			Obstacle(height, 0.6f);
 			CreateCharacter(float3.zero);
 			Advance(30);
-			_sample.SetInput(new MmdSampleInput { JumpPressed = true, Movement = moving ? new float2(0f, 1f) : float2.zero });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { JumpPressed = true, Movement = moving ? new float2(0f, 1f) : float2.zero });
 			_sample.Tick();
 			var manager = _sample.World.EntityManager;
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleHurdle>>(_character), Is.EqualTo(moving));
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleVault>>(_character), Is.EqualTo(!moving));
-			_sample.SetInput(default);
+			_sample.World.EntityManager.SetComponentData(_character, default(MmdSampleInput));
 			FinishSmoothTraversal();
 			Assert.That(manager.GetComponentData<LocalTransform>(_character).Position.z, Is.GreaterThan(1.9f));
 			Assert.That(manager.GetComponentData<LocalTransform>(_character).Position.y, Is.InRange(-0.03f, 0.08f));
@@ -101,7 +101,7 @@ namespace ColInt.MMD.Tests {
 			var manager = _sample.World.EntityManager;
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleFall>>(_character), Is.True);
 			float before = manager.GetComponentData<LocalTransform>(_character).Position.y;
-			_sample.SetInput(new MmdSampleInput { JumpPressed = true, Run = run });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { JumpPressed = true, Run = run });
 			_sample.Tick();
 			Assert.That(manager.HasComponent<MmdSampleTraversalActive>(_character), Is.True);
 			Assert.That(manager.GetComponentData<LocalTransform>(_character).Position.y, Is.GreaterThan(before - 0.05f));
@@ -109,7 +109,7 @@ namespace ColInt.MMD.Tests {
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleCatchMantle>>(_character), Is.EqualTo(depth > 2f && height < 2f));
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleCatchVault>>(_character), Is.EqualTo(depth < 1f && !run));
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleCatchHurdle>>(_character), Is.EqualTo(depth < 1f && run));
-			_sample.SetInput(default);
+			_sample.World.EntityManager.SetComponentData(_character, default(MmdSampleInput));
 			FinishSmoothTraversal();
 			Assert.That(manager.GetComponentData<LocalTransform>(_character).Position.y, Is.EqualTo(depth > 2f ? height : 0f).Within(0.08f));
 		}
@@ -126,7 +126,7 @@ namespace ColInt.MMD.Tests {
 			var velocity = manager.GetComponentData<PhysicsVelocity>(_character);
 			velocity.Linear.z = speed;
 			manager.SetComponentData(_character, velocity);
-			_sample.SetInput(new MmdSampleInput { JumpPressed = true, Movement = speed > 0f ? new float2(0f, 1f) : float2.zero, Run = speed > 2f });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { JumpPressed = true, Movement = speed > 0f ? new float2(0f, 1f) : float2.zero, Run = speed > 2f });
 			_sample.Tick();
 			Assert.That(manager.HasComponent<MmdSampleTraversalActive>(_character), Is.False,
 				"A buffered jump must not pull a distant airborne character onto the wall.");
@@ -138,7 +138,7 @@ namespace ColInt.MMD.Tests {
 		public void SpaceWithoutReachableLedgeKeepsOrdinaryJump() {
 			CreateCharacter(float3.zero);
 			Advance(30);
-			_sample.SetInput(new MmdSampleInput { JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { JumpPressed = true });
 			_sample.Tick();
 			Assert.That(_sample.World.EntityManager.HasComponent<MmdSampleState<MmdSampleJump>>(_character), Is.True);
 			Assert.That(_sample.World.EntityManager.HasComponent<MmdSampleTraversalActive>(_character), Is.False);
@@ -150,7 +150,7 @@ namespace ColInt.MMD.Tests {
 			AddBox(new float3(0f, 2.4f, 2.5f), new float3(4f, 0.3f, 3f));
 			CreateCharacter(float3.zero);
 			Advance(30);
-			_sample.SetInput(new MmdSampleInput { JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { JumpPressed = true });
 			_sample.Tick();
 			Assert.That(_sample.World.EntityManager.HasComponent<MmdSampleTraversalActive>(_character), Is.False);
 		}
@@ -160,7 +160,7 @@ namespace ColInt.MMD.Tests {
 			Entity obstacle = Obstacle(2.2f, 3f);
 			CreateCharacter(float3.zero);
 			Advance(30);
-			_sample.SetInput(new MmdSampleInput { JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { JumpPressed = true });
 			Advance(65);
 			var manager = _sample.World.EntityManager;
 			Assert.That(manager.HasComponent<MmdSampleTraversalActive>(_character), Is.True);
@@ -177,7 +177,7 @@ namespace ColInt.MMD.Tests {
 			Obstacle(2.2f, 3f);
 			CreateCharacter(float3.zero);
 			Advance(30);
-			_sample.SetInput(new MmdSampleInput { JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { JumpPressed = true });
 			Advance(40);
 			var manager = _sample.World.EntityManager;
 			float time = manager.GetComponentData<MmdPlayback>(_character).Time;
@@ -192,7 +192,7 @@ namespace ColInt.MMD.Tests {
 			Advance(10);
 			Assert.That(manager.GetComponentData<MmdPlayback>(_character).Time, Is.EqualTo(time));
 			manager.RemoveComponent<Disabled>(_character);
-			_sample.SetInput(new MmdSampleInput { JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { JumpPressed = true });
 			_sample.Tick();
 			Assert.That(manager.GetComponentData<MmdActionRequest>(_character).Revision, Is.EqualTo(revision));
 			FinishSmoothTraversal();
@@ -203,7 +203,7 @@ namespace ColInt.MMD.Tests {
 			Obstacle(2.2f, 0.3f);
 			CreateCharacter(float3.zero);
 			Advance(30);
-			_sample.SetInput(new MmdSampleInput { JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { JumpPressed = true });
 			_sample.Tick();
 			Assert.That(_sample.World.EntityManager.HasComponent<MmdSampleState<MmdSampleClimb>>(_character), Is.True);
 			FinishSmoothTraversal();
@@ -215,7 +215,7 @@ namespace ColInt.MMD.Tests {
 			Obstacle(2.2f, 3f);
 			CreateCharacter(float3.zero);
 			Advance(30);
-			_sample.SetInput(new MmdSampleInput { JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { JumpPressed = true });
 			Advance(35);
 			AddBox(new float3(0f, 2.8f, 2f), new float3(4f, 0.3f, 4f));
 			Advance(50);
@@ -232,7 +232,7 @@ namespace ColInt.MMD.Tests {
 			AddBox(new float3(0f, height * 0.5f, 2.5f), new float3(width, height, 3f));
 			CreateCharacter(float3.zero);
 			Advance(30);
-			_sample.SetInput(new MmdSampleInput { JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { JumpPressed = true });
 			_sample.Tick();
 			Assert.That(_sample.World.EntityManager.HasComponent<MmdSampleTraversalActive>(_character), Is.False);
 		}
@@ -245,10 +245,10 @@ namespace ColInt.MMD.Tests {
 			Obstacle(0.9f, 0.6f);
 			CreateCharacter(float3.zero);
 			Advance(30);
-			_sample.SetInput(new MmdSampleInput { JumpPressed = true, Movement = new float2(0f, 1f), Run = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { JumpPressed = true, Movement = new float2(0f, 1f), Run = true });
 			_sample.Tick();
 			Assert.That(manager.HasComponent<MmdSampleTraversalActive>(_character), Is.True);
-			_sample.SetInput(default);
+			_sample.World.EntityManager.SetComponentData(_character, default(MmdSampleInput));
 			for (int tick = 0; tick < 200; tick++) {
 				_sample.Tick();
 				if (manager.HasComponent<MmdSampleState<MmdSampleFall>>(_character)) {
@@ -280,18 +280,18 @@ namespace ColInt.MMD.Tests {
 		[TestCase(2.2f, 3f)]
 		public void RunningApproachSelectsRunningTraversalBeforeTheShortStandingProbe(float height, float depth) {
 			CreateCharacter(float3.zero);
-			_sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Run = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = new float2(0f, 1f), Run = true });
 			Advance(90);
 			var manager = _sample.World.EntityManager;
 			float front = manager.GetComponentData<LocalTransform>(_character).Position.z + 2.1f;
 			AddBox(new float3(0f, height * 0.5f, front + depth * 0.5f), new float3(3f, height, depth));
 			_sample.Tick();
-			_sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Run = true, JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = new float2(0f, 1f), Run = true, JumpPressed = true });
 			_sample.Tick();
 			Assert.That(manager.HasComponent<MmdSampleTraversalActive>(_character), Is.True);
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleJump>>(_character), Is.False);
 			Assert.That(manager.GetComponentData<MmdSampleTraversalProgress>(_character).Clip.EntrySpeed, Is.GreaterThan(3f));
-			_sample.SetInput(default);
+			_sample.World.EntityManager.SetComponentData(_character, default(MmdSampleInput));
 			FinishSmoothTraversal();
 		}
 
@@ -301,13 +301,13 @@ namespace ColInt.MMD.Tests {
 		[TestCase(0.9f)]
 		public void ReleasingRunAndForwardDuringMediumLedgeClimbReturnsToIdle(float releaseFraction) {
 			CreateCharacter(float3.zero);
-			_sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Run = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = new float2(0f, 1f), Run = true });
 			Advance(90);
 			var manager = _sample.World.EntityManager;
 			float front = manager.GetComponentData<LocalTransform>(_character).Position.z + 2.1f;
 			AddBox(new float3(0f, 0.7f, front + 0.75f), new float3(1.8f, 1.4f, 1.5f));
 			_sample.Tick();
-			_sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Run = true, JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = new float2(0f, 1f), Run = true, JumpPressed = true });
 			_sample.Tick();
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleMantle>>(_character), Is.True);
 			var clip = manager.GetComponentData<MmdSampleTraversalProgress>(_character).Clip;
@@ -317,7 +317,7 @@ namespace ColInt.MMD.Tests {
 			float3 previous = manager.GetComponentData<LocalTransform>(_character).Position;
 			bool settled = false;
 			for (int tick = 0; tick < 150; tick++) {
-				_sample.SetInput(tick < releaseTick ? new MmdSampleInput { Movement = new float2(0f, 1f), Run = true } : default);
+				_sample.World.EntityManager.SetComponentData(_character, tick < releaseTick ? new MmdSampleInput { Movement = new float2(0f, 1f), Run = true } : default);
 				_sample.Tick();
 				var playback = manager.GetComponentData<MmdPlayback>(_character);
 				var action = manager.GetComponentData<MmdActionState>(_character);
@@ -354,7 +354,7 @@ namespace ColInt.MMD.Tests {
 		[TestCase(1, 2.1f)]
 		public void RunningMantleSettlesOnTheTopAndHandsOffWithoutFallOrSpeedLoss(int foot, float approachDistance) {
 			CreateCharacter(float3.zero);
-			_sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Run = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = new float2(0f, 1f), Run = true });
 			Advance(90);
 			var manager = _sample.World.EntityManager;
 			var clips = manager.GetBuffer<MmdSampleTraversalClip>(_character);
@@ -374,10 +374,10 @@ namespace ColInt.MMD.Tests {
 			float front = manager.GetComponentData<LocalTransform>(_character).Position.z + approachDistance;
 			AddBox(new float3(0f, 0.70000005f, front + 0.75f), new float3(1.8f, 1.4000001f, 1.5f));
 			_sample.Tick();
-			_sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Run = true, JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = new float2(0f, 1f), Run = true, JumpPressed = true });
 			_sample.Tick();
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleMantle>>(_character), Is.True);
-			_sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Run = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = new float2(0f, 1f), Run = true });
 			var target = manager.GetComponentData<MmdSampleTraversalTarget>(_character);
 			var profile = manager.GetComponentData<MmdSampleTraversalProgress>(_character).Clip;
 			float previousHeight = float.PositiveInfinity;
@@ -412,16 +412,16 @@ namespace ColInt.MMD.Tests {
 		[TestCase(true, 3f)]
 		public void HeldForwardContinuesMovingAfterRunningMediumLedgeClimb(bool runAfterClimb, float depth) {
 			CreateCharacter(float3.zero);
-			_sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Run = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = new float2(0f, 1f), Run = true });
 			Advance(90);
 			var manager = _sample.World.EntityManager;
 			float front = manager.GetComponentData<LocalTransform>(_character).Position.z + 2.1f;
 			AddBox(new float3(0f, 0.7f, front + depth * 0.5f), new float3(1.8f, 1.4f, depth));
 			_sample.Tick();
-			_sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Run = true, JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = new float2(0f, 1f), Run = true, JumpPressed = true });
 			_sample.Tick();
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleMantle>>(_character), Is.True);
-			_sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Run = runAfterClimb });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = new float2(0f, 1f), Run = runAfterClimb });
 			for (int tick = 0; tick < 150 && manager.HasComponent<MmdSampleTraversalActive>(_character); tick++) {
 				_sample.Tick();
 				var progress = manager.GetComponentData<MmdSampleTraversalProgress>(_character);
@@ -457,9 +457,9 @@ namespace ColInt.MMD.Tests {
 			Obstacle(1f, 1f);
 			CreateCharacter(float3.zero);
 			Advance(30);
-			_sample.SetInput(new MmdSampleInput { Movement = run ? new float2(0f, 1f) : float2.zero, Run = run, JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = run ? new float2(0f, 1f) : float2.zero, Run = run, JumpPressed = true });
 			_sample.Tick();
-			_sample.SetInput(default);
+			_sample.World.EntityManager.SetComponentData(_character, default(MmdSampleInput));
 			var manager = _sample.World.EntityManager;
 			for (int tick = 0; tick < 200 && !manager.GetComponentData<MmdActionState>(_character).Completed; tick++) {
 				_sample.Tick();
@@ -510,10 +510,10 @@ namespace ColInt.MMD.Tests {
 			clips.Clear();
 			clips.Add(chosen);
 			bool moving = chosen.ActionId == hurdle;
-			_sample.SetInput(new MmdSampleInput { Movement = moving ? new float2(0f, 1f) : float2.zero, Run = moving && chosen.EntrySpeed > 3f, JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = moving ? new float2(0f, 1f) : float2.zero, Run = moving && chosen.EntrySpeed > 3f, JumpPressed = true });
 			_sample.Tick();
 			Assert.That(manager.HasComponent<MmdSampleTraversalActive>(_character), Is.True, "Clip " + chosen.ClipIndex);
-			_sample.SetInput(default);
+			_sample.World.EntityManager.SetComponentData(_character, default(MmdSampleInput));
 			int heldTicks = 0;
 			for (int tick = 0; tick < 220 && manager.HasComponent<MmdSampleTraversalActive>(_character); tick++) {
 				_sample.Tick();
@@ -536,12 +536,12 @@ namespace ColInt.MMD.Tests {
 			Obstacle(1.4f, 3f);
 			CreateCharacter(float3.zero);
 			Advance(30);
-			_sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Run = run, JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = new float2(0f, 1f), Run = run, JumpPressed = true });
 			_sample.Tick();
 			var manager = _sample.World.EntityManager;
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleMantle>>(_character), Is.True);
 			Assert.That(manager.GetComponentData<MmdSampleTraversalProgress>(_character).Clip.RootHeight, Is.LessThan(1.5f));
-			_sample.SetInput(default);
+			_sample.World.EntityManager.SetComponentData(_character, default(MmdSampleInput));
 			FinishSmoothTraversal();
 			Assert.That(manager.GetComponentData<LocalTransform>(_character).Position.y, Is.EqualTo(1.4f).Within(0.08f));
 		}
@@ -553,14 +553,14 @@ namespace ColInt.MMD.Tests {
 			Obstacle(height, 3f);
 			CreateCharacter(float3.zero);
 			Advance(30);
-			_sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Run = true, JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = new float2(0f, 1f), Run = true, JumpPressed = true });
 			_sample.Tick();
 			var manager = _sample.World.EntityManager;
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleClimb>>(_character), Is.True);
 			Assert.That(manager.GetComponentData<MmdSampleTraversalProgress>(_character).Clip.EntrySpeed, Is.GreaterThan(3f));
 			var target = manager.GetComponentData<MmdSampleTraversalTarget>(_character);
 			Assert.That(target.End.z, Is.InRange(1f, 1.1f), "The stop must remain at the edge instead of adding a full capsule radius to the landing depth.");
-			_sample.SetInput(default);
+			_sample.World.EntityManager.SetComponentData(_character, default(MmdSampleInput));
 			FinishSmoothTraversal();
 			Assert.That(manager.GetComponentData<LocalTransform>(_character).Position.z, Is.EqualTo(target.End.z).Within(0.05f));
 			float3 stopped = manager.GetComponentData<LocalTransform>(_character).Position;
@@ -578,9 +578,9 @@ namespace ColInt.MMD.Tests {
 		public void PressingIntoWallEntersClimbWithoutPlayingItsWalkingApproach() {
 			Obstacle(2.2f, 3f);
 			CreateCharacter(new float3(0f, 0f, 0.66f));
-			_sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f) });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = new float2(0f, 1f) });
 			Advance(90);
-			_sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = new float2(0f, 1f), JumpPressed = true });
 			_sample.Tick();
 			var manager = _sample.World.EntityManager;
 			Assert.That(manager.HasComponent<MmdSampleTraversalActive>(_character), Is.True);
@@ -589,7 +589,7 @@ namespace ColInt.MMD.Tests {
 			Assert.That(profile.StartTime, Is.GreaterThan(0.2f));
 			Assert.That(manager.GetComponentData<MmdInertialization>(_character).PoseDuration, Is.LessThanOrEqualTo(0.1f));
 			Assert.That(manager.GetComponentData<MmdPlayback>(_character).Time, Is.GreaterThanOrEqualTo(profile.StartTime));
-			_sample.SetInput(default);
+			_sample.World.EntityManager.SetComponentData(_character, default(MmdSampleInput));
 			FinishSmoothTraversal();
 		}
 
@@ -601,10 +601,10 @@ namespace ColInt.MMD.Tests {
 			Advance(30);
 			var manager = _sample.World.EntityManager;
 			manager.SetComponentData(_character, new PhysicsVelocity { Linear = new float3(0f, 0f, 4f) });
-			_sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Run = true, JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = new float2(0f, 1f), Run = true, JumpPressed = true });
 			_sample.Tick();
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleHurdle>>(_character), Is.True);
-			_sample.SetInput(default);
+			_sample.World.EntityManager.SetComponentData(_character, default(MmdSampleInput));
 			float highest = 0f;
 			float forwardDuringLift = 0f;
 			float3 previous = manager.GetComponentData<LocalTransform>(_character).Position;
@@ -636,7 +636,7 @@ namespace ColInt.MMD.Tests {
 			CreateCharacter(new float3(0f, 0f, 0.25f));
 			Advance(30);
 			var manager = _sample.World.EntityManager;
-			_sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Run = run, JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = new float2(0f, 1f), Run = run, JumpPressed = true });
 			_sample.Tick();
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleJump>>(_character), Is.True);
 			bool caught = false;
@@ -652,7 +652,7 @@ namespace ColInt.MMD.Tests {
 			}
 			Assert.That(caught, Is.True, "The buffered jump must still catch when the character reaches the nearby wall.");
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleCatchCliff>>(_character), Is.True);
-			_sample.SetInput(default);
+			_sample.World.EntityManager.SetComponentData(_character, default(MmdSampleInput));
 			FinishSmoothTraversal();
 		}
 
@@ -662,7 +662,7 @@ namespace ColInt.MMD.Tests {
 			Obstacle(height, 3f);
 			CreateCharacter(new float3(0f, 0f, 0.66f));
 			Advance(30);
-			_sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = new float2(0f, 1f), JumpPressed = true });
 			_sample.Tick();
 			var manager = _sample.World.EntityManager;
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleJump>>(_character), Is.True);
@@ -671,7 +671,7 @@ namespace ColInt.MMD.Tests {
 			}
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleCatchCliff>>(_character), Is.True);
 			Assert.That(manager.GetComponentData<MmdSampleJumpIntent>(_character).TraversalRemaining, Is.Zero);
-			_sample.SetInput(default);
+			_sample.World.EntityManager.SetComponentData(_character, default(MmdSampleInput));
 			FinishSmoothTraversal();
 			Assert.That(manager.GetComponentData<LocalTransform>(_character).Position.y, Is.EqualTo(height).Within(0.08f));
 		}
@@ -717,10 +717,10 @@ namespace ColInt.MMD.Tests {
 				}
 			}
 			Assert.That(anchors, Is.EqualTo(6));
-			_sample.SetInput(new MmdSampleInput { Movement = forward.xz, Run = true, JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = forward.xz, Run = true, JumpPressed = true });
 			_sample.Tick();
 			Assert.That(manager.HasComponent<MmdSampleTraversalActive>(_character), Is.True);
-			_sample.SetInput(default);
+			_sample.World.EntityManager.SetComponentData(_character, default(MmdSampleInput));
 			var chosen = manager.GetComponentData<MmdSampleTraversalProgress>(_character).Clip;
 			var target = manager.GetComponentData<MmdSampleTraversalTarget>(_character);
 			float3 previous = manager.GetComponentData<LocalTransform>(_character).Position;

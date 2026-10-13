@@ -48,12 +48,12 @@ namespace ColInt.MMD.Tests {
 					Assert.That(hips, Is.GreaterThanOrEqualTo(0));
 					var poses = manager.GetBuffer<MmdLocalPose>(actor);
 					float3 bodyAxis = math.rotate(math.inverse(ModelRotation(ref database.Value, poses, hips)), new float3(0f, 0f, 1f));
-					sample.SetInput(new MmdSampleInput { Movement = new float2(initialX, 0f), Run = run });
+					sample.World.EntityManager.SetComponentData(actor, new MmdSampleInput { Movement = new float2(initialX, 0f), Run = run });
 					for (int tick = 0; tick < leadTicks; tick++) {
 						sample.Tick();
 					}
 					var direction = new float2(-initialX, 0f);
-					sample.SetInput(new MmdSampleInput { Movement = direction, Run = run });
+					sample.World.EntityManager.SetComponentData(actor, new MmdSampleInput { Movement = direction, Run = run });
 					float error = math.abs(MmdSampleFacing.YawError(manager.GetComponentData<LocalTransform>(actor).Rotation, direction));
 					var initial = manager.GetComponentData<LocalTransform>(actor);
 					float side = math.sign(MmdSampleFacing.YawError(initial.Rotation, direction,

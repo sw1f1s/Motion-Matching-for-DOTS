@@ -5,6 +5,7 @@ using ColInt.MMD.Lifecycle.Components;
 using ColInt.MMD.Playback.Components;
 using ColInt.MMD.Samples.Character.Configurations;
 using ColInt.MMD.Samples.Character.Input.Components;
+using ColInt.MMD.Samples.Character.Movement.CrouchState.Components;
 using ColInt.MMD.Samples.Character.Movement.FallState.Components;
 using ColInt.MMD.Samples.Character.Movement.JumpState.Components;
 using ColInt.MMD.Samples.Character.Movement.LandingState.Components;
@@ -45,14 +46,34 @@ namespace ColInt.MMD.Tests {
 			Object.DestroyImmediate(_configuration);
 		}
 
+		[Test]
+		public void JumpAndCrouchIntentsRemainOnTheirOwnCharacters() {
+			_character = _sample.Characters.CreateAutonomous(_configuration, LocalTransform.FromPosition(new float3(-3f, 0f, 0f)));
+			Entity other = _sample.Characters.CreateAutonomous(_configuration, LocalTransform.FromPosition(new float3(3f, 0f, 0f)));
+			Advance(30);
+			var manager = _sample.World.EntityManager;
+			manager.SetComponentData(_character, new MmdSampleInput { Crouch = true, JumpPressed = true });
+			manager.SetComponentData(other, new MmdSampleInput { Crouch = true });
+			_sample.Tick();
+			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleJump>>(_character), Is.True);
+			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleJump>>(other), Is.False);
+			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleCrouchEnter>>(other), Is.True);
+			Assert.That(manager.GetComponentData<MmdSampleInput>(_character).Crouch, Is.False);
+			Assert.That(manager.GetComponentData<MmdSampleInput>(other).Crouch, Is.True);
+			Advance(210);
+			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleLocomotion>>(_character), Is.True);
+			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleCrouch>>(other), Is.True);
+			Assert.That(manager.GetComponentData<MmdSampleJumpIntent>(other).Remaining, Is.Zero);
+		}
+
 		[TestCase(0)]
 		[TestCase(1)]
 		[TestCase(2)]
 		public void SpaceProducesOneJumpThenFallLandingAndLocomotion(int gait) {
 			CreateCharacter(float3.zero);
-			_sample.SetInput(new MmdSampleInput { Movement = gait > 0 ? new float2(0f, 1f) : float2.zero, Run = gait == 2 });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = gait > 0 ? new float2(0f, 1f) : float2.zero, Run = gait == 2 });
 			Advance(90);
-			_sample.SetInput(new MmdSampleInput { Movement = gait > 0 ? new float2(0f, 1f) : float2.zero, Run = gait == 2, JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = gait > 0 ? new float2(0f, 1f) : float2.zero, Run = gait == 2, JumpPressed = true });
 			bool jump = false;
 			bool fall = false;
 			bool landing = false;
@@ -87,6 +108,54 @@ namespace ColInt.MMD.Tests {
 			Assert.That(finalManager.HasComponent<MmdSampleState<MmdSampleLocomotion>>(_character), Is.True);
 			Assert.That(finalManager.GetComponentData<LocalTransform>(_character).Position.y, Is.InRange(-0.03f, 0.08f));
 			Assert.That(finalManager.GetComponentData<MmdSampleGroundState>(_character).LandingStrength, Is.LessThan(_configuration.Landing.HeavyHeight));
+		}
+
+		[TestCase(false)]
+		[TestCase(true)]
+		public void FallingLoopPlaysContinuouslyUntilItsNaturalWrap(bool steerInAir) {
+			CreateCharacter(new float3(0f, 100f, 0f));
+			var manager = _sample.World.EntityManager;
+			bool playingFall = false;
+			bool wrapped = false;
+			int fallTicks = 0;
+			MmdPlayback previous = default;
+			for (int tick = 0; tick < 480; tick++) {
+				if (steerInAir) {
+					_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = new float2(tick % 120 < 60 ? -1f : 1f, 1f), Run = true });
+				}
+				_sample.Tick();
+				Assert.That(manager.GetComponentData<MmdFault>(_character).Code, Is.EqualTo(ColInt.MMD.Lifecycle.Data.MmdFaultCode.None));
+				if (!manager.HasComponent<MmdSampleState<MmdSampleFall>>(_character)) {
+					if (playingFall) {
+						break;
+					}
+					continue;
+				}
+				var database = manager.GetComponentData<MmdDatabase>(_character).Value;
+				var playback = manager.GetComponentData<MmdPlayback>(_character);
+				var clip = database.Value.Clips[playback.ClipIndex];
+				int fall = manager.GetComponentData<MmdSampleFall>(_character).Group;
+				if (!MotionDatabaseGroups.Contains(ref database.Value, clip, fall)) {
+					continue;
+				}
+				Assert.That(clip.Loop, Is.True);
+				if (playingFall) {
+					float expected = ColInt.MMD.Playback.Helpers.MmdAnimationMath.LocalTime(clip, previous.Time + Timestep * playback.Speed);
+					Assert.That(playback.ClipIndex, Is.EqualTo(previous.ClipIndex));
+					Assert.That(playback.Revision, Is.EqualTo(previous.Revision), "Falling must not seek back to an earlier pose of the same clip.");
+					Assert.That(playback.Time, Is.EqualTo(expected).Within(0.0001f));
+					wrapped |= playback.Time < previous.Time;
+				}
+				playingFall = true;
+				previous = playback;
+				fallTicks++;
+			}
+			Assert.That(fallTicks, Is.GreaterThan(210), "Exercise a complete 3.33-second fall loop using the real Sample database.");
+			Assert.That(wrapped, Is.True);
+			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleLanding>>(_character), Is.True);
+			Advance(120);
+			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleLocomotion>>(_character), Is.True);
+			Assert.That(manager.GetComponentData<MmdPlayback>(_character).SearchCountdown, Is.LessThan(1f), "Grounded locomotion must resume its normal searches.");
 		}
 
 		[TestCase(1f, false)]
@@ -151,7 +220,7 @@ namespace ColInt.MMD.Tests {
 			AddBox(new float3(0f, 1.75f, 0f), new float3(4f, 3.5f, 4f));
 			CreateCharacter(new float3(0f, 3.52f, 0f));
 			Advance(45);
-			_sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Run = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = new float2(0f, 1f), Run = true });
 			bool fall = false;
 			bool landing = false;
 			for (int tick = 0; tick < 230; tick++) {
@@ -175,7 +244,7 @@ namespace ColInt.MMD.Tests {
 			}
 			CreateCharacter(new float3(0f, 8f * riser + 0.02f, -0.15f));
 			Advance(30);
-			_sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Run = run });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = new float2(0f, 1f), Run = run });
 			var manager = _sample.World.EntityManager;
 			for (int tick = 0; tick < 400 && manager.GetComponentData<LocalTransform>(_character).Position.z < 5.5f; tick++) {
 				_sample.Tick();
@@ -190,7 +259,7 @@ namespace ColInt.MMD.Tests {
 		public void PauseDisabledAndSameStateRequestPreserveFlightWithoutSecondImpulse() {
 			CreateCharacter(float3.zero);
 			Advance(30);
-			_sample.SetInput(new MmdSampleInput { JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { JumpPressed = true });
 			Advance(10);
 			var manager = _sample.World.EntityManager;
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleJump>>(_character), Is.True);
@@ -231,7 +300,7 @@ namespace ColInt.MMD.Tests {
 		public void SpaceAppliesJumpImpulseOnItsFirstTick() {
 			CreateCharacter(float3.zero);
 			Advance(20);
-			_sample.SetInput(new MmdSampleInput { JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { JumpPressed = true });
 			_sample.Tick();
 			var manager = _sample.World.EntityManager;
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleJump>>(_character), Is.True);
@@ -247,7 +316,7 @@ namespace ColInt.MMD.Tests {
 			var manager = _sample.World.EntityManager;
 			manager.SetComponentData(_character, LocalTransform.FromPosition(new float3(0f, 0.2f, 0f)));
 			manager.SetComponentData(_character, new PhysicsVelocity { Linear = new float3(0f, -0.8f, 0f) });
-			_sample.SetInput(new MmdSampleInput { JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { JumpPressed = true });
 			_sample.Tick();
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleJump>>(_character), Is.True);
 			Assert.That(manager.GetComponentData<PhysicsVelocity>(_character).Linear.y, Is.GreaterThan(3f));
@@ -262,7 +331,7 @@ namespace ColInt.MMD.Tests {
 				_sample.Tick();
 			}
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleLanding>>(_character), Is.True);
-			_sample.SetInput(new MmdSampleInput { JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { JumpPressed = true });
 			_sample.Tick();
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleJump>>(_character), Is.True);
 			Assert.That(manager.GetComponentData<PhysicsVelocity>(_character).Linear.y, Is.GreaterThan(3f));
@@ -276,7 +345,7 @@ namespace ColInt.MMD.Tests {
 				_sample.Tick();
 			}
 			Assert.That(manager.GetComponentData<MmdSampleGroundState>(_character).IsGrounded, Is.False);
-			_sample.SetInput(new MmdSampleInput { JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { JumpPressed = true });
 			for (int tick = 0; tick < 10 && !manager.HasComponent<MmdSampleState<MmdSampleJump>>(_character); tick++) {
 				_sample.Tick();
 			}
@@ -292,7 +361,7 @@ namespace ColInt.MMD.Tests {
 			Advance(60);
 			var manager = _sample.World.EntityManager;
 			float2 start = manager.GetComponentData<LocalTransform>(_character).Position.xz;
-			_sample.SetInput(new MmdSampleInput { JumpPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { JumpPressed = true });
 			float2 firstFallPose = float2.zero;
 			bool fell = false;
 			for (int tick = 0; tick < 100; tick++) {

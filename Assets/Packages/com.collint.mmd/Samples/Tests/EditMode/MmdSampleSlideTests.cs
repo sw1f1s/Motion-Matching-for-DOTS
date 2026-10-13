@@ -10,6 +10,8 @@ using ColInt.MMD.Samples.Character.Configurations;
 using ColInt.MMD.Samples.Character.Input.Components;
 using ColInt.MMD.Samples.Character.Movement.CrouchState.Components;
 using ColInt.MMD.Samples.Character.Movement.FallState.Components;
+using ColInt.MMD.Samples.Character.Movement.JumpState.Components;
+using ColInt.MMD.Samples.Character.Movement.LandingState.Components;
 using ColInt.MMD.Samples.Character.Movement.LocomotionState.Components;
 using ColInt.MMD.Samples.Character.Movement.Shared.Components;
 using ColInt.MMD.Samples.Character.Movement.SlideState.Components;
@@ -50,7 +52,7 @@ namespace ColInt.MMD.Tests {
 		[TestCase(false, true)]
 		public void EachGaitUsesItsOwnAnimationGroup(bool run, bool sprint) {
 			CreateFlatCharacter();
-			_sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Run = run, Sprint = sprint });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = new float2(0f, 1f), Run = run, Sprint = sprint });
 			Advance(180);
 			var manager = _sample.World.EntityManager;
 			var control = manager.GetComponentData<MmdSampleCharacterControl>(_character);
@@ -66,7 +68,7 @@ namespace ColInt.MMD.Tests {
 		public void SprintCrouchBrakesWithoutInputAndPlaysExitIntoCrouch() {
 			CreateFlatCharacter();
 			StartSlide();
-			_sample.SetInput(new MmdSampleInput { Crouch = true, Facing = new float2(-1f, 0f) });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Crouch = true, Facing = new float2(-1f, 0f) });
 			var manager = _sample.World.EntityManager;
 			float previous = math.length(manager.GetComponentData<MmdSampleSlideProgress>(_character).Velocity);
 			bool sawLoop = false;
@@ -88,6 +90,49 @@ namespace ColInt.MMD.Tests {
 			Assert.That(math.length(manager.GetComponentData<PhysicsVelocity>(_character).Linear.xz), Is.LessThan(0.1f));
 		}
 
+		[TestCase(false)]
+		[TestCase(true)]
+		public void HeldSprintFinishesSlideStandingInsteadOfCrouching(bool moving) {
+			CreateFlatCharacter();
+			StartSlide();
+			var input = new MmdSampleInput { Sprint = true, Crouch = true, Movement = moving ? new float2(0f, 1f) : float2.zero };
+			_sample.World.EntityManager.SetComponentData(_character, input);
+			var manager = _sample.World.EntityManager;
+			bool sawExit = false;
+			for (int tick = 0; tick < 360; tick++) {
+				_sample.Tick();
+				sawExit |= manager.HasComponent<MmdSampleState<MmdSampleSlideExit>>(_character);
+				Assert.That(manager.HasComponent<MmdSampleState<MmdSampleCrouchEnter>>(_character), Is.False);
+				Assert.That(manager.HasComponent<MmdSampleState<MmdSampleCrouch>>(_character), Is.False, "Held sprint must win over the crouch toggle when slide finishes.");
+				AssertHealthy();
+			}
+			Assert.That(sawExit, Is.True);
+			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleLocomotion>>(_character), Is.True);
+			Assert.That(manager.GetComponentData<MmdSampleMovement>(_character).CrouchCollider, Is.False);
+			Assert.That(manager.GetComponentData<MmdSampleCharacterControl>(_character).SprintSpeed, Is.EqualTo(_configuration.Locomotion.SprintSpeed));
+			if (moving) {
+				Assert.That(math.length(manager.GetComponentData<PhysicsVelocity>(_character).Linear.xz), Is.GreaterThan(_configuration.Locomotion.SprintSpeed * 0.8f));
+			}
+		}
+
+		[TestCase(false)]
+		[TestCase(true)]
+		public void SprintPreventsCrouchWhenSlideCannotStart(bool moving) {
+			CreateFlatCharacter();
+			var input = new MmdSampleInput { Sprint = true, Crouch = true, CrouchPressed = true, Movement = moving ? new float2(0f, 1f) : float2.zero };
+			_sample.World.EntityManager.SetComponentData(_character, input);
+			_sample.Tick();
+			var manager = _sample.World.EntityManager;
+			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleSlide>>(_character), Is.False, "Slide requires enough incoming speed.");
+			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleCrouchEnter>>(_character), Is.False);
+			input.CrouchPressed = false;
+			_sample.World.EntityManager.SetComponentData(_character, input);
+			Advance(120);
+			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleLocomotion>>(_character), Is.True);
+			Assert.That(manager.GetComponentData<MmdSampleMovement>(_character).CrouchCollider, Is.False);
+			AssertHealthy();
+		}
+
 		[Test]
 		public void SlideStopsAtAWallAndCanReturnToStanding() {
 			CreateFlatCharacter();
@@ -95,11 +140,11 @@ namespace ColInt.MMD.Tests {
 			var manager = _sample.World.EntityManager;
 			float wall = manager.GetComponentData<LocalTransform>(_character).Position.z + 2f;
 			AddBox(new float3(0f, 1.5f, wall), new float3(10f, 3f, 1f), quaternion.identity);
-			_sample.SetInput(new MmdSampleInput { Crouch = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Crouch = true });
 			Advance(300);
 			Assert.That(manager.GetComponentData<LocalTransform>(_character).Position.z, Is.LessThan(wall - 0.45f));
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleCrouch>>(_character), Is.True);
-			_sample.SetInput(new MmdSampleInput());
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput());
 			Advance(180);
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleLocomotion>>(_character), Is.True);
 			var control = manager.GetComponentData<MmdSampleCharacterControl>(_character);
@@ -115,7 +160,7 @@ namespace ColInt.MMD.Tests {
 			_character = _sample.Characters.Create(_configuration, LocalTransform.Identity, true, false);
 			Advance(30);
 			StartSlide();
-			_sample.SetInput(new MmdSampleInput { Crouch = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Crouch = true });
 			Advance(120);
 			var manager = _sample.World.EntityManager;
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleFall>>(_character), Is.True);
@@ -130,13 +175,14 @@ namespace ColInt.MMD.Tests {
 		[TestCase(true, true, false)]
 		public void SlideRequiresSprintSpeedAndANewCrouchPress(bool sprint, bool moving, bool pressed) {
 			CreateFlatCharacter();
-			_sample.SetInput(new MmdSampleInput { Movement = moving ? new float2(0f, 1f) : float2.zero, Run = true, Sprint = sprint });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = moving ? new float2(0f, 1f) : float2.zero, Run = true, Sprint = sprint });
 			Advance(150);
-			_sample.SetInput(new MmdSampleInput { Movement = moving ? new float2(0f, 1f) : float2.zero, Run = true, Sprint = sprint, Crouch = true, CrouchPressed = pressed });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = moving ? new float2(0f, 1f) : float2.zero, Run = true, Sprint = sprint, Crouch = true, CrouchPressed = pressed });
 			_sample.Tick();
 			var manager = _sample.World.EntityManager;
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleSlide>>(_character), Is.False);
-			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleCrouchEnter>>(_character), Is.True);
+			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleCrouchEnter>>(_character), Is.EqualTo(!sprint));
+			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleLocomotion>>(_character), Is.EqualTo(sprint));
 		}
 
 		[Test]
@@ -146,7 +192,7 @@ namespace ColInt.MMD.Tests {
 			_character = _sample.Characters.Create(_configuration, LocalTransform.FromPosition(new float3(0f, 10f * math.tan(angle), -10f)), true, false);
 			Advance(30);
 			StartSlide();
-			_sample.SetInput(new MmdSampleInput { Crouch = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Crouch = true });
 			var manager = _sample.World.EntityManager;
 			float initial = math.length(manager.GetComponentData<MmdSampleSlideProgress>(_character).Velocity);
 			Advance(180);
@@ -170,12 +216,12 @@ namespace ColInt.MMD.Tests {
 			Advance(30);
 			var manager = _sample.World.EntityManager;
 			float2 direction = math.normalizesafe(downhill.xz);
-			_sample.SetInput(new MmdSampleInput { Movement = direction, Sprint = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = direction, Sprint = true });
 			Advance(150);
-			_sample.SetInput(new MmdSampleInput { Movement = direction, Sprint = true, Crouch = true, CrouchPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = direction, Sprint = true, Crouch = true, CrouchPressed = true });
 			_sample.Tick();
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleSlide>>(_character), Is.True);
-			_sample.SetInput(new MmdSampleInput { Crouch = true, Facing = new float2(direction.y, -direction.x) });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Crouch = true, Facing = new float2(direction.y, -direction.x) });
 			for (int tick = 0; tick < 180; tick++) {
 				_sample.Tick();
 				var transform = manager.GetComponentData<LocalTransform>(_character);
@@ -235,22 +281,21 @@ namespace ColInt.MMD.Tests {
 			AddBox(-normal * 0.5f, new float3(120f, 1f, 120f), slope);
 			_character = _sample.Characters.Create(_configuration, LocalTransform.FromPositionRotation(-downhill * 20f, quaternion.RotateY(yaw)), true, false);
 			Advance(30);
-			_sample.SetInput(new MmdSampleInput { Movement = direction, Sprint = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = direction, Sprint = true });
 			Advance(150);
-			_sample.SetInput(new MmdSampleInput { Movement = direction, Sprint = true, Crouch = true, CrouchPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = direction, Sprint = true, Crouch = true, CrouchPressed = true });
 			_sample.Tick();
-			_sample.SetInput(new MmdSampleInput { Crouch = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Crouch = true });
 			Advance(10);
 			var manager = _sample.World.EntityManager;
 			float speed = math.length(manager.GetComponentData<MmdSampleSlideProgress>(_character).Velocity);
 			float2 desired = math.normalizesafe(math.rotate(quaternion.AxisAngle(normal, side * math.radians(35f)), downhill).xz);
 			var input = new MmdSampleInput { Crouch = true, Movement = desired, Facing = -desired };
 			if (characterInput) {
-				manager.AddComponentData(_character, new MmdSampleCharacterInputOverride { Value = input });
-				_sample.SetInput(new MmdSampleInput { Crouch = true, Movement = -desired });
-			} else {
-				_sample.SetInput(input);
+				Entity other = manager.CreateEntity(typeof(MmdSampleInput));
+				manager.SetComponentData(other, new MmdSampleInput { Crouch = true, Movement = -desired });
 			}
+			manager.SetComponentData(_character, input);
 			Advance(30);
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleSlide>>(_character), Is.True);
 			float3 velocity = manager.GetComponentData<MmdSampleSlideProgress>(_character).Velocity;
@@ -289,7 +334,7 @@ namespace ColInt.MMD.Tests {
 				query[feature] = new MmdSearchQueryElement { Value = data.Value.Features[data.Value.Clips[exit].FirstFrame * query.Length + feature] };
 			}
 			manager.SetComponentData(_character, new MmdSampleSlideProgress());
-			_sample.SetInput(new MmdSampleInput { Crouch = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Crouch = true });
 			_sample.Tick();
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleSlideExit>>(_character), Is.True);
 			Assert.That(manager.GetComponentData<MmdPlayback>(_character).ClipIndex, Is.EqualTo(exit));
@@ -330,7 +375,7 @@ namespace ColInt.MMD.Tests {
 		public void MovementInterruptsSlideExitOnTheNextTick(bool sprint) {
 			CreateFlatCharacter();
 			StartSlide();
-			_sample.SetInput(new MmdSampleInput { Crouch = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Crouch = true });
 			var manager = _sample.World.EntityManager;
 			int ticks = 0;
 			while (!manager.HasComponent<MmdSampleState<MmdSampleSlideExit>>(_character) && ticks < 300) {
@@ -338,7 +383,7 @@ namespace ColInt.MMD.Tests {
 				ticks++;
 			}
 			Assert.That(ticks, Is.LessThan(300));
-			_sample.SetInput(new MmdSampleInput { Crouch = !sprint, Sprint = sprint, Movement = new float2(0f, 1f) });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Crouch = !sprint, Sprint = sprint, Movement = new float2(0f, 1f) });
 			_sample.Tick();
 			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleSlideExit>>(_character), Is.False);
 			if (sprint) {
@@ -353,6 +398,67 @@ namespace ColInt.MMD.Tests {
 				Assert.That(MotionDatabaseGroups.Contains(ref data.Value, data.Value.Clips[playback.ClipIndex], crouch.MoveGroup), Is.True);
 			}
 			AssertHealthy();
+		}
+
+		[TestCase("Entry")]
+		[TestCase("Loop")]
+		[TestCase("Exit")]
+		public void JumpInterruptsSlideImmediatelyAndPlaysTheJump(string phase) {
+			CreateFlatCharacter();
+			StartSlide();
+			var manager = _sample.World.EntityManager;
+			var data = manager.GetComponentData<MmdDatabase>(_character).Value;
+			var standing = manager.GetComponentData<MmdSampleCrouchProgress>(_character);
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Crouch = true });
+			if (phase == "Loop") {
+				int ticks = 0;
+				while (!data.Value.Clips[manager.GetComponentData<MmdPlayback>(_character).ClipIndex].Loop && ticks < 240) {
+					_sample.Tick();
+					ticks++;
+				}
+				Assert.That(ticks, Is.LessThan(240));
+				Assert.That(manager.HasComponent<MmdSampleState<MmdSampleSlide>>(_character), Is.True);
+			} else if (phase == "Exit") {
+				int ticks = 0;
+				while (!manager.HasComponent<MmdSampleState<MmdSampleSlideExit>>(_character) && ticks < 300) {
+					_sample.Tick();
+					ticks++;
+				}
+				Assert.That(ticks, Is.LessThan(300));
+			}
+			float startHeight = manager.GetComponentData<LocalTransform>(_character).Position.y;
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Crouch = true, JumpPressed = true });
+			_sample.Tick();
+			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleJump>>(_character), Is.True, "Space must interrupt the slide on the input tick.");
+			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleSlide>>(_character), Is.False);
+			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleSlideExit>>(_character), Is.False);
+			var jump = manager.GetComponentData<MmdSampleJump>(_character);
+			var action = manager.GetComponentData<MmdActionState>(_character);
+			Assert.That(action.ActionId == jump.StandAction || action.ActionId == jump.WalkAction || action.ActionId == jump.RunAction, Is.True);
+			Assert.That(data.Value.Clips[manager.GetComponentData<MmdPlayback>(_character).ClipIndex].ActionId, Is.EqualTo(action.ActionId));
+			Assert.That(manager.GetComponentData<MmdSampleMovement>(_character).CrouchCollider, Is.False);
+			Assert.That(manager.GetComponentData<PhysicsCollider>(_character).Value, Is.EqualTo(manager.GetComponentData<MmdSamplePhysicsColliderOwner>(_character).Value));
+			Assert.That(manager.GetComponentData<MmdSampleCharacterControl>(_character), Is.EqualTo(standing.StandingControl));
+			Assert.That(manager.GetComponentData<MmdInertialization>(_character), Is.EqualTo(standing.StandingInertialization));
+			uint requestRevision = manager.GetComponentData<MmdActionRequest>(_character).Revision;
+			Assert.That(_sample.World.EntityManager.GetComponentData<MmdSampleInput>(_character).Crouch, Is.False, "A jump must consume the slide crouch toggle without requiring another key press.");
+			float highest = startHeight;
+			bool landed = false;
+			for (int tick = 0; tick < 240; tick++) {
+				_sample.Tick();
+				if (manager.HasComponent<MmdSampleState<MmdSampleJump>>(_character)) {
+					Assert.That(manager.GetComponentData<MmdActionRequest>(_character).Revision, Is.EqualTo(requestRevision));
+				}
+				highest = math.max(highest, manager.GetComponentData<LocalTransform>(_character).Position.y);
+				landed |= manager.HasComponent<MmdSampleState<MmdSampleLanding>>(_character);
+				Assert.That(_sample.World.EntityManager.GetComponentData<MmdSampleInput>(_character).Crouch, Is.False);
+				Assert.That(manager.HasComponent<MmdSampleState<MmdSampleCrouchEnter>>(_character), Is.False);
+				Assert.That(manager.HasComponent<MmdSampleState<MmdSampleCrouch>>(_character), Is.False);
+				AssertHealthy();
+			}
+			Assert.That(highest - startHeight, Is.GreaterThan(0.5f));
+			Assert.That(landed, Is.True);
+			Assert.That(manager.HasComponent<MmdSampleState<MmdSampleLocomotion>>(_character), Is.True);
 		}
 
 		[Test]
@@ -380,9 +486,9 @@ namespace ColInt.MMD.Tests {
 		}
 
 		private void StartSlide() {
-			_sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Sprint = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = new float2(0f, 1f), Sprint = true });
 			Advance(150);
-			_sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Sprint = true, Crouch = true, CrouchPressed = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = new float2(0f, 1f), Sprint = true, CrouchPressed = true });
 			_sample.Tick();
 			Assert.That(_sample.World.EntityManager.HasComponent<MmdSampleState<MmdSampleSlide>>(_character), Is.True);
 		}

@@ -32,11 +32,11 @@ namespace ColInt.MMD.Tests {
 					}
 					Assert.That(manager.GetComponentData<MmdPlayback>(actor).Revision, Is.Zero);
 					var moving = new MmdSampleInput { Movement = new float2(0f, 1f), Run = run };
-					sample.SetInput(moving);
+					sample.World.EntityManager.SetComponentData(actor, moving);
 					for (int tick = 0; tick < 120; tick++) {
 						sample.Tick();
 					}
-					sample.SetInput(default);
+					sample.World.EntityManager.SetComponentData(actor, default(MmdSampleInput));
 					sample.Tick();
 					var data = manager.GetComponentData<MmdDatabase>(actor);
 					var stop = manager.GetComponentData<MmdPlayback>(actor);
@@ -87,7 +87,7 @@ namespace ColInt.MMD.Tests {
 					var transform = manager.GetComponentData<LocalTransform>(actor);
 					Assert.That(math.distance(transform.Position.xz, position.xz), Is.LessThan(0.001f));
 					Assert.That(math.abs(math.dot(transform.Rotation.value, rotation.value)), Is.GreaterThan(0.99999f));
-					sample.SetInput(moving);
+					sample.World.EntityManager.SetComponentData(actor, moving);
 					for (int tick = 0; tick < 120; tick++) {
 						sample.Tick();
 					}

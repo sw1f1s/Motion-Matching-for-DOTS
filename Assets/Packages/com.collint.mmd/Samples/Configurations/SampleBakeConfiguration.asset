@@ -758,6 +758,17 @@ MonoBehaviour:
     - {fileID: 8993902097722301239, guid: 355d0975c9b2a4eeebd7418663a06122, type: 3}
     - {fileID: 8993902097722301239, guid: f7633b32030944945b8d994f2bbdc038, type: 3}
     - {fileID: 8993902097722301239, guid: 3705c19cbd3d44ee3b6ef9b60b6b2480, type: 3}
+  - <Name>k__BackingField: Reversal
+    <Playback>k__BackingField: 0
+    <Clips>k__BackingField:
+    - {fileID: 8993902097722301239, guid: e9c398d4a5eb64eb389d89e1ec7389e6, type: 3}
+    - {fileID: 8993902097722301239, guid: 501fdd0fe39bc4ac8b7eaf9852965450, type: 3}
+    - {fileID: 8993902097722301239, guid: 97b92338560c3430f8a7691d8d8675c9, type: 3}
+    - {fileID: 8993902097722301239, guid: a1577568572e940f795ef7d49736b466, type: 3}
+    - {fileID: 8993902097722301239, guid: 491a9e07d85d248fbbc4e317d4e59354, type: 3}
+    - {fileID: 8993902097722301239, guid: ead238f5481784081b1c703ea8aee9d9, type: 3}
+    - {fileID: 8993902097722301239, guid: 2ba7f352d45964c729a7b68a4407abf9, type: 3}
+    - {fileID: 8993902097722301239, guid: ce4c8f20cfe9145aa8168fb2922827d2, type: 3}
   _sampleRate: 60
   _maximumRotationErrorDegrees: 0.05
   _normalizationGroups:

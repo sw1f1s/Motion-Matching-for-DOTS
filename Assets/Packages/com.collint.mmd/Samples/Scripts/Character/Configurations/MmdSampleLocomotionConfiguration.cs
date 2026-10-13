@@ -33,5 +33,8 @@ namespace ColInt.MMD.Samples.Character.Configurations {
 
 		[field: SerializeField]
 		public string StartGroup { get; set; } = string.Empty;
+
+		[field: SerializeField, Tooltip("Optional group of planted moving reversals used for sharp run/sprint direction changes.")]
+		public string ReversalGroup { get; set; } = string.Empty;
 	}
 }

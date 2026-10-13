@@ -25,11 +25,10 @@ namespace ColInt.MMD.Samples.Character.Movement.CrouchState.Systems {
 				return;
 			}
 			var world = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld;
-			bool crouching = SystemAPI.GetSingleton<MmdSampleInput>().Crouch;
-			foreach (var (current, transform, owner, transition, entity) in SystemAPI.Query<RefRW<MmdSampleState<MmdSampleCrouch>>, RefRO<LocalTransform>,
-				RefRO<MmdSamplePhysicsColliderOwner>, RefRW<MmdSampleStateTransition>>().WithEntityAccess()) {
+			foreach (var (current, transform, owner, transition, input, entity) in SystemAPI.Query<RefRW<MmdSampleState<MmdSampleCrouch>>, RefRO<LocalTransform>,
+				RefRO<MmdSamplePhysicsColliderOwner>, RefRW<MmdSampleStateTransition>, RefRO<MmdSampleInput>>().WithEntityAccess()) {
 				current.ValueRW.Elapsed += SystemAPI.Time.DeltaTime;
-				if (!crouching && MmdSampleCapsuleQuery.CanStand(world, entity, owner.ValueRO.Value, transform.ValueRO)) {
+				if ((!input.ValueRO.Crouch || input.ValueRO.Sprint) && MmdSampleCapsuleQuery.CanStand(world, entity, owner.ValueRO.Value, transform.ValueRO)) {
 					transition.ValueRW.Request<MmdSampleCrouchExit>(MmdSampleStatePriority.Completion);
 				}
 			}

@@ -22,9 +22,9 @@ namespace ColInt.MMD.Samples.Character.Movement.CrouchState.Systems {
 			if (SystemAPI.GetSingleton<MmdWorldState>().IsPaused) {
 				return;
 			}
-			bool moving = math.lengthsq(SystemAPI.GetSingleton<MmdSampleInput>().Movement) > 0.001f;
-			foreach (var (current, progress, action, transition) in SystemAPI.Query<RefRW<MmdSampleState<MmdSampleCrouchExit>>, RefRO<MmdSampleCrouchProgress>,
-				RefRO<MmdActionState>, RefRW<MmdSampleStateTransition>>()) {
+			foreach (var (current, progress, action, transition, input) in SystemAPI.Query<RefRW<MmdSampleState<MmdSampleCrouchExit>>, RefRO<MmdSampleCrouchProgress>,
+				RefRO<MmdActionState>, RefRW<MmdSampleStateTransition>, RefRO<MmdSampleInput>>()) {
+				bool moving = math.lengthsq(input.ValueRO.Movement) > 0.001f;
 				current.ValueRW.Elapsed += SystemAPI.Time.DeltaTime;
 				if (current.ValueRO.Elapsed >= progress.ValueRO.Duration || moving ||
 					action.ValueRO.Completed || action.ValueRO.Rejected) {

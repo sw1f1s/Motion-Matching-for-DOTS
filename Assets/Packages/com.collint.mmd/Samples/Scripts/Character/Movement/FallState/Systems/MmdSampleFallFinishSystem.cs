@@ -1,3 +1,4 @@
+using ColInt.MMD.Playback.Components;
 using ColInt.MMD.Lifecycle.Components;
 using ColInt.MMD.Samples.Character.Movement.FallState.Components;
 using ColInt.MMD.Samples.Character.Movement.Shared.Components;
@@ -16,8 +17,9 @@ namespace ColInt.MMD.Samples.Character.Movement.FallState.Systems {
 			if (SystemAPI.GetSingleton<MmdWorldState>().IsPaused) {
 				return;
 			}
-			foreach (var movement in SystemAPI.Query<RefRW<MmdSampleMovement>>().WithAll<MmdSampleStateFinished<MmdSampleFall>>()) {
+			foreach (var (movement, playback) in SystemAPI.Query<RefRW<MmdSampleMovement>, RefRW<MmdPlayback>>().WithAll<MmdSampleStateFinished<MmdSampleFall>>()) {
 				movement.ValueRW = default;
+				playback.ValueRW.SearchCountdown = 0f;
 			}
 		}
 	}

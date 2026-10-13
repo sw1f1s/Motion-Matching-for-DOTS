@@ -1,3 +1,4 @@
+using ColInt.MMD.Samples.Character.Input.Helpers;
 using ColInt.MMD.Samples.Character.Movement.SlideState.Systems;
 using ColInt.MMD.Playback.Systems;
 using ColInt.MMD.Samples.Character.Movement.CrouchState.Systems;
@@ -58,6 +59,7 @@ namespace ColInt.MMD.Samples.Character.Movement.Shared.Helpers {
 			var start = world.GetOrCreateSystemManaged<MmdSampleStateStartGroup>();
 			var cleanup = world.GetOrCreateSystemManaged<MmdSampleStateCleanupGroup>();
 			var policy = world.GetOrCreateSystemManaged<MmdSampleStatePolicyGroup>();
+			MmdSampleInputInstaller.Install(world, cleanup);
 			ground.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleGroundSystem>());
 			requests.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleTraversalRequestSystem>());
 			requests.AddSystemToUpdateList(world.GetOrCreateSystem<MmdSampleCrouchRequestSystem>());

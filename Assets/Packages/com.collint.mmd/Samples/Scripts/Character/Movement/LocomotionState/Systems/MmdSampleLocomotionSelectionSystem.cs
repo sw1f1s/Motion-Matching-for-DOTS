@@ -39,7 +39,6 @@ namespace ColInt.MMD.Samples.Character.Movement.LocomotionState.Systems {
 				return;
 			}
 			state.Dependency = new LocomotionIntentJob {
-				Input = SystemAPI.GetSingleton<MmdSampleInput>(), CharacterInputs = SystemAPI.GetComponentLookup<MmdSampleCharacterInputOverride>(true),
 				CrouchSettings = SystemAPI.GetComponentLookup<MmdSampleCrouch>(true), CrouchProgress = SystemAPI.GetComponentLookup<MmdSampleCrouchProgress>(true)
 			}.ScheduleParallel(state.Dependency);
 		}
@@ -52,15 +51,12 @@ namespace ColInt.MMD.Samples.Character.Movement.LocomotionState.Systems {
 			private const float CrouchStoppingPositionWeight = 8f;
 			private const float CrouchDirectionWeight = 256f;
 
-			public MmdSampleInput Input;
-			[ReadOnly] public ComponentLookup<MmdSampleCharacterInputOverride> CharacterInputs;
 			[ReadOnly] public ComponentLookup<MmdSampleCrouch> CrouchSettings;
 			[ReadOnly] public ComponentLookup<MmdSampleCrouchProgress> CrouchProgress;
 
-			private void Execute(Entity entity, in MmdSampleCharacterControl control, in MmdTrajectoryEnvironment environment, in MmdActionState action, in MmdActionRequest request,
+			private void Execute(in MmdSampleInput input, Entity entity, in MmdSampleCharacterControl control, in MmdTrajectoryEnvironment environment, in MmdActionState action, in MmdActionRequest request,
 				in LocalTransform transform, in MmdSampleMovement movement, ref MmdSampleTrajectoryState trajectory,
 				ref MmdSearchSettings settings, ref MmdPlayback playback, DynamicBuffer<MmdMotionGroup> groups) {
-				var input = CharacterInputs.HasComponent(entity) ? CharacterInputs[entity].Value : Input;
 				bool cancellingAction = action.ActionId != 0 && request.ActionId == 0 && request.Revision != action.RequestRevision;
 				if (action.ActionId != 0 && !cancellingAction) {
 					return;
@@ -72,13 +68,17 @@ namespace ColInt.MMD.Samples.Character.Movement.LocomotionState.Systems {
 				// Crouch stops contain several approach steps. Prioritize the requested
 				// braking path over their matching moving foot phase when releasing input.
 				settings.TrajectoryPositionWeight = movement.CrouchCollider && !hasMovement ? CrouchStoppingPositionWeight : 1f;
+				float directionChange = math.lengthsq(desiredMovement - trajectory.DesiredMovement);
 				bool wasTurning = control.TurnGroup != 0 && MmdMotionGroups.Is(groups, MmdMotionGroupUsage.Required, control.TurnGroup);
 				float turnError = math.abs(MmdSampleFacing.YawError(transform.Rotation, desiredMovement));
 				bool turnInPlace = hasMovement && control.TurnGroup != 0 &&
 					(wasTurning ? turnError > TurnExitAngle : math.isfinite(environment.MaximumSpeed) && turnError > TurnEntryAngle);
 				int group;
 				bool requireStart = false;
-				int previousGait = MmdMotionGroups.First(groups, MmdMotionGroupUsage.Required, control.StartGroup);
+				int previousGait = MmdMotionGroups.Contains(groups, control.SprintGroup, MmdMotionGroupUsage.Required) ? control.SprintGroup :
+					MmdMotionGroups.Contains(groups, control.RunGroup, MmdMotionGroupUsage.Required) ? control.RunGroup :
+					MmdMotionGroups.Contains(groups, control.WalkGroup, MmdMotionGroupUsage.Required) ? control.WalkGroup :
+					MmdMotionGroups.First(groups, MmdMotionGroupUsage.Required, control.StartGroup);
 				bool wasMoving = previousGait == control.WalkGroup || previousGait == control.RunGroup || previousGait == control.SprintGroup;
 				float movementThreshold = control.WalkSpeed * (wasMoving ? 0.2f : 0.3f);
 				if (turnInPlace) {
@@ -101,7 +101,7 @@ namespace ColInt.MMD.Samples.Character.Movement.LocomotionState.Systems {
 				bool excludeStart = false;
 				if (control.StartGroup != 0 && (group == control.WalkGroup || group == control.RunGroup || group == control.SprintGroup)) {
 					bool wasStarting = MmdMotionGroups.Contains(groups, control.StartGroup, MmdMotionGroupUsage.Required);
-					bool starting = MmdMotionGroups.Is(groups, MmdMotionGroupUsage.Required, control.IdleGroup) || wasStarting &&
+					bool starting = wasTurning || MmdMotionGroups.Is(groups, MmdMotionGroupUsage.Required, control.IdleGroup) || wasStarting &&
 						(playback.TransitionElapsed < settings.MinimumTransitionTime || !movement.CrouchCollider && turnError > TurnEntryAngle ||
 						math.lengthsq(trajectory.Velocity.xz) < control.WalkSpeed * control.WalkSpeed * 0.09f);
 					if (starting) {
@@ -112,17 +112,21 @@ namespace ColInt.MMD.Samples.Character.Movement.LocomotionState.Systems {
 						excludeStart = playback.TransitionElapsed >= settings.MinimumTransitionTime || MmdMotionGroups.Contains(groups, control.StartGroup, MmdMotionGroupUsage.Excluded);
 					}
 				}
+				bool wasReversing = MmdMotionGroups.Contains(groups, control.ReversalGroup, MmdMotionGroupUsage.Required);
+				bool requireReversal = control.ReversalGroup != 0 && !movement.CrouchCollider && !requireStart &&
+					(group == control.RunGroup || group == control.SprintGroup) &&
+					(wasReversing ? turnError > TurnExitAngle && (directionChange <= 1f || turnError > 2.0943951f) :
+						wasMoving && turnError > 2.0943951f && directionChange > 1f);
 				// Crouch keeps its stride through moving turns. Stationary starts remain
 				// eligible until acceleration settles, without restarting pivot tails.
 				// Sprint and standing action exits return to cycles after aligning.
-				settings.PreferLoop = !requireStart && (cancellingAction || movement.CrouchCollider || group == control.SprintGroup) &&
+				settings.PreferLoop = !requireStart && !requireReversal && (cancellingAction || movement.CrouchCollider || group == control.SprintGroup || wasReversing) &&
 					(group == control.WalkGroup || group == control.RunGroup || group == control.SprintGroup) && (movement.CrouchCollider || turnError <= TurnEntryAngle) &&
 					math.lengthsq(trajectory.Velocity.xz) > math.square(control.WalkSpeed * 0.3f);
 				if (movement.CrouchCollider) {
 					// Moving turns and aligned strides must both follow the requested path.
 					settings.TrajectoryDirectionWeight = hasMovement ? CrouchDirectionWeight : CrouchProgress[entity].StandingDirectionWeight;
 				}
-				float directionChange = math.lengthsq(desiredMovement - trajectory.DesiredMovement);
 				bool changedDirection = directionChange > 0.01f;
 				trajectory.DesiredMovement = desiredMovement;
 				// Continuous mouse rotation must not restart a sprint pose blend every tick.
@@ -130,9 +134,9 @@ namespace ColInt.MMD.Samples.Character.Movement.LocomotionState.Systems {
 				if (changedDirection && (requireStart || group != control.SprintGroup || directionChange > 1f || !wasMoving)) {
 					playback.TransitionElapsed = settings.MinimumTransitionTime;
 				}
-				if (!MmdMotionGroups.Is(groups, MmdMotionGroupUsage.Required, group, requireStart ? control.StartGroup : 0) ||
+				if (!MmdMotionGroups.Is(groups, MmdMotionGroupUsage.Required, group, requireStart ? control.StartGroup : requireReversal ? control.ReversalGroup : 0) ||
 					MmdMotionGroups.Contains(groups, control.StartGroup, MmdMotionGroupUsage.Excluded) != excludeStart || changedDirection) {
-					MmdMotionGroups.Set(groups, MmdMotionGroupUsage.Required, group, requireStart ? control.StartGroup : 0);
+					MmdMotionGroups.Set(groups, MmdMotionGroupUsage.Required, group, requireStart ? control.StartGroup : requireReversal ? control.ReversalGroup : 0);
 					MmdMotionGroups.Remove(groups, control.StartGroup, MmdMotionGroupUsage.Excluded);
 					if (excludeStart) {
 						MmdMotionGroups.Add(groups, control.StartGroup, MmdMotionGroupUsage.Excluded);

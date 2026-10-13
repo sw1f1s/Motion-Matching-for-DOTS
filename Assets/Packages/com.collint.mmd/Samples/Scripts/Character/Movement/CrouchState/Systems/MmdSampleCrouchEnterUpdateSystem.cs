@@ -26,13 +26,12 @@ namespace ColInt.MMD.Samples.Character.Movement.CrouchState.Systems {
 			if (SystemAPI.GetSingleton<MmdWorldState>().IsPaused) {
 				return;
 			}
-			var input = SystemAPI.GetSingleton<MmdSampleInput>();
-			bool moving = math.lengthsq(input.Movement) > 0.001f;
 			var world = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld;
-			foreach (var (current, progress, action, transition, transform, owner, entity) in SystemAPI.Query<RefRW<MmdSampleState<MmdSampleCrouchEnter>>, RefRO<MmdSampleCrouchProgress>,
-				RefRO<MmdActionState>, RefRW<MmdSampleStateTransition>, RefRO<LocalTransform>, RefRO<MmdSamplePhysicsColliderOwner>>().WithEntityAccess()) {
+			foreach (var (current, progress, action, transition, transform, owner, input, entity) in SystemAPI.Query<RefRW<MmdSampleState<MmdSampleCrouchEnter>>, RefRO<MmdSampleCrouchProgress>,
+				RefRO<MmdActionState>, RefRW<MmdSampleStateTransition>, RefRO<LocalTransform>, RefRO<MmdSamplePhysicsColliderOwner>, RefRO<MmdSampleInput>>().WithEntityAccess()) {
+				bool moving = math.lengthsq(input.ValueRO.Movement) > 0.001f;
 				current.ValueRW.Elapsed += SystemAPI.Time.DeltaTime;
-				if (!input.Crouch && MmdSampleCapsuleQuery.CanStand(world, entity, owner.ValueRO.Value, transform.ValueRO)) {
+				if ((!input.ValueRO.Crouch || input.ValueRO.Sprint) && MmdSampleCapsuleQuery.CanStand(world, entity, owner.ValueRO.Value, transform.ValueRO)) {
 					transition.ValueRW.Request<MmdSampleCrouchExit>(MmdSampleStatePriority.Completion);
 				} else if (current.ValueRO.Elapsed >= progress.ValueRO.Duration || moving || action.ValueRO.ActionId == 0 ||
 					action.ValueRO.Completed || action.ValueRO.Rejected) {

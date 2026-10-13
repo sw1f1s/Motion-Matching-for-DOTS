@@ -29,22 +29,21 @@ namespace ColInt.MMD.Samples.Character.Movement.CrouchState.Systems {
 			if (SystemAPI.GetSingleton<MmdWorldState>().IsPaused) {
 				return;
 			}
-			state.Dependency = new StartJob { Input = SystemAPI.GetSingleton<MmdSampleInput>() }.Schedule(state.Dependency);
+			state.Dependency = new StartJob().Schedule(state.Dependency);
 		}
 
 		[BurstCompile]
 		[WithAll(typeof(MmdSampleStateStarted<MmdSampleCrouchEnter>))]
 		private partial struct StartJob : IJobEntity {
-			public MmdSampleInput Input;
 
-			private void Execute(in MmdSampleCrouch crouch, ref MmdSampleCrouchProgress progress, ref MmdSampleCharacterControl control,
+			private void Execute(in MmdSampleInput input, in MmdSampleCrouch crouch, ref MmdSampleCrouchProgress progress, ref MmdSampleCharacterControl control,
 				in PhysicsVelocity velocity, ref MmdSampleMovement movement, ref MmdSearchSettings settings, ref MmdPlayback playback,
 				ref MmdInertialization smoothing, in MmdDatabase data, ref MmdActionRequest request, DynamicBuffer<MmdSearchQueryElement> query, DynamicBuffer<MmdMotionGroup> groups) {
 				progress.StandingControl = control;
 				progress.StandingInertialization = smoothing;
 				progress.StandingDirectionWeight = settings.TrajectoryDirectionWeight;
 				float speed = math.length(velocity.Linear.xz);
-				bool stationary = speed < control.WalkSpeed * 0.3f && math.lengthsq(Input.Movement) < 0.001f;
+				bool stationary = speed < control.WalkSpeed * 0.3f && math.lengthsq(input.Movement) < 0.001f;
 				control.WalkSpeed = crouch.Speed;
 				control.RunSpeed = crouch.Speed;
 				control.SprintSpeed = crouch.Speed;

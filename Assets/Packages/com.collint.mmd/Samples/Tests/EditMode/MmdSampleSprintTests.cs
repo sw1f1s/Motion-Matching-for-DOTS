@@ -3,6 +3,10 @@ using ColInt.MMD.Database.Data;
 using ColInt.MMD.Database.Helpers;
 using ColInt.MMD.Lifecycle.Components;
 using ColInt.MMD.Playback.Components;
+using ColInt.MMD.Physics.Components;
+using ColInt.MMD.MotionMatching.Components;
+using ColInt.MMD.MotionMatching.Data;
+using ColInt.MMD.MotionMatching.Helpers;
 using ColInt.MMD.Samples.Character.Components;
 using ColInt.MMD.Samples.Character.Configurations;
 using ColInt.MMD.Samples.Character.Input.Components;
@@ -44,7 +48,7 @@ namespace ColInt.MMD.Tests {
 		[TestCase(36, true)]
 		public void SharpSprintTurnsKeepKneesStable(int interval, bool orbit) {
 			CreateFlatCharacter();
-			_sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Sprint = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = new float2(0f, 1f), Sprint = true });
 			Advance(150);
 			var manager = _sample.World.EntityManager;
 			var data = manager.GetComponentData<MmdDatabase>(_character).Value;
@@ -54,7 +58,7 @@ namespace ColInt.MMD.Tests {
 			for (int tick = 0; tick < 360; tick++) {
 				float angle = orbit ? tick * math.PI / interval : (tick / interval) % 2 == 0 ? math.PI * 0.75f : -math.PI * 0.75f;
 				var direction = new float2(math.sin(angle), math.cos(angle));
-				_sample.SetInput(new MmdSampleInput { Run = true, Sprint = true, Movement = direction });
+				_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Run = true, Sprint = true, Movement = direction });
 				_sample.Tick();
 				var playback = manager.GetComponentData<MmdPlayback>(_character);
 				Assert.That(MotionDatabaseGroups.Contains(ref data.Value, data.Value.Clips[playback.ClipIndex], control.StartGroup), Is.False, "Moving sprint turns must not splice stationary reface starts.");
@@ -65,11 +69,107 @@ namespace ColInt.MMD.Tests {
 				Assert.That(KneeSwing(poses[right].Value.Rotation), Is.LessThan(math.radians(30f)));
 				AssertHealthy();
 			}
-			_sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Sprint = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = new float2(0f, 1f), Sprint = true });
 			Advance(180);
 			var settled = manager.GetComponentData<MmdPlayback>(_character);
 			Assert.That(data.Value.Clips[settled.ClipIndex].Loop, Is.True, "An aligned sprint must return to its stride.");
 			Assert.That(MotionDatabaseGroups.Contains(ref data.Value, data.Value.Clips[settled.ClipIndex], control.SprintGroup), Is.True);
+		}
+
+		[TestCase(-1f, 170f, true)]
+		[TestCase(1f, 170f, true)]
+		[TestCase(1f, 180f, true)]
+		[TestCase(-1f, 170f, false)]
+		[TestCase(1f, 170f, false)]
+		[TestCase(1f, 180f, false)]
+		public void SharpMovingReversalSelectsTheAuthoredHalfTurn(float side, float angleDegrees, bool sprint) {
+			CreateFlatCharacter();
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = new float2(0f, 1f), Run = true, Sprint = sprint });
+			Advance(150);
+			var manager = _sample.World.EntityManager;
+			var data = manager.GetComponentData<MmdDatabase>(_character).Value;
+			var catalogs = new ColInt.MMD.Editor.Diagnostics.MmdDebugCatalogStore();
+			catalogs.Reload();
+			var catalog = catalogs.Resolve(data);
+			Assert.That(catalog, Is.Not.Null);
+			float angle = side * math.radians(angleDegrees);
+			var direction = new float2(math.sin(angle), math.cos(angle));
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = direction, Run = true, Sprint = sprint });
+			bool halfTurn = false;
+			var trace = new System.Collections.Generic.List<string>();
+			float startX = manager.GetComponentData<LocalTransform>(_character).Position.x;
+			float maximumSideways = 0f;
+			for (int tick = 0; tick < 90; tick++) {
+				_sample.Tick();
+				var playback = manager.GetComponentData<MmdPlayback>(_character);
+				string name = catalog.Names[playback.ClipIndex];
+				if (tick < 12) {
+					halfTurn |= name.Contains((sprint ? "Sprint" : "Run") + (side < 0f ? "_Turn_L_180" : "_Turn_R_180"));
+				}
+				if (tick % 6 == 0) {
+					var transform = manager.GetComponentData<LocalTransform>(_character);
+					float3 forward = math.rotate(transform.Rotation, new float3(0f, 0f, 1f));
+					trace.Add(name + " @ " + playback.Time.ToString("F3") + " x=" + (transform.Position.x - startX).ToString("F2") + " yaw=" + math.degrees(math.atan2(forward.x, forward.z)).ToString("F1"));
+				}
+				maximumSideways = math.max(maximumSideways, math.abs(manager.GetComponentData<LocalTransform>(_character).Position.x - startX));
+				AssertHealthy();
+			}
+			Assert.That(halfTurn, Is.True, string.Join("; ", trace));
+			Assert.That(maximumSideways, Is.LessThan(1.5f), "A sprint reversal must brake and pivot rather than trace a wide arc. " + string.Join("; ", trace));
+			float2 facing = math.rotate(manager.GetComponentData<LocalTransform>(_character).Rotation, new float3(0f, 0f, 1f)).xz;
+			Assert.That(math.dot(facing, direction), Is.GreaterThan(0.95f));
+			Assert.That(data.Value.Clips[manager.GetComponentData<MmdPlayback>(_character).ClipIndex].Loop, Is.True, "Aligned movement must leave the reversal clip and resume its gait cycle.");
+		}
+
+		[TestCase(-90f, false, 0)]
+		[TestCase(-90f, false, 60)]
+		[TestCase(90f, false, 0)]
+		[TestCase(90f, false, 60)]
+		[TestCase(180f, false, 0)]
+		[TestCase(180f, false, 60)]
+		[TestCase(-90f, true, 0)]
+		[TestCase(-90f, true, 60)]
+		[TestCase(90f, true, 0)]
+		[TestCase(90f, true, 60)]
+		[TestCase(180f, true, 0)]
+		[TestCase(180f, true, 60)]
+		public void HeldMovementLeavesWallAfterTurningWithoutAnotherPress(float angleDegrees, bool sprint, int blockedTicks) {
+			CreateFlatCharacter();
+			AddBox(new float3(0f, 2f, 5f), new float3(80f, 4f, 1f), quaternion.identity);
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = new float2(0f, 1f), Run = true, Sprint = sprint });
+			var manager = _sample.World.EntityManager;
+			for (int tick = 0; tick < 180; tick++) {
+				_sample.Tick();
+				if (manager.GetComponentData<LocalTransform>(_character).Position.z > 3.5f && math.length(manager.GetComponentData<PhysicsVelocity>(_character).Linear.xz) < 0.2f) {
+					break;
+				}
+			}
+			Advance(blockedTicks);
+			float3 start = manager.GetComponentData<LocalTransform>(_character).Position;
+			Assert.That(start.z, Is.InRange(3.5f, 4.5f), "The character must first reach the wall.");
+			Assert.That(math.length(manager.GetComponentData<PhysicsVelocity>(_character).Linear.xz), Is.LessThan(0.2f));
+			float angle = math.radians(angleDegrees);
+			var direction = new float2(math.sin(angle), math.cos(angle));
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = direction, Run = true, Sprint = sprint });
+			var trace = new System.Collections.Generic.List<string>();
+			for (int tick = 0; tick < 180; tick++) {
+				_sample.Tick();
+				if (tick % 12 == 0) {
+					var transform = manager.GetComponentData<LocalTransform>(_character);
+					var playback = manager.GetComponentData<MmdPlayback>(_character);
+					var environment = manager.GetComponentData<MmdTrajectoryEnvironment>(_character);
+					trace.Add(tick + " group=" + MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(_character), MmdMotionGroupUsage.Required) + " clip=" + playback.ClipIndex + " time=" + playback.Time.ToString("F3") + " yaw=" + math.degrees(math.atan2(transform.Forward().x, transform.Forward().z)).ToString("F1") + " fraction=" + environment.MovementFraction.ToString("F3"));
+				}
+				if (tick == 89) {
+					float2 forward = manager.GetComponentData<LocalTransform>(_character).Forward().xz;
+					Assert.That(math.dot(forward, direction), Is.GreaterThan(0.99f), "The wall turn must align within 1.5 seconds. " + string.Join("; ", trace));
+				}
+				AssertHealthy();
+			}
+			var final = manager.GetComponentData<LocalTransform>(_character);
+			Assert.That(math.dot((final.Position - start).xz, direction), Is.GreaterThan(5f), string.Join("; ", trace));
+			Assert.That(math.dot(final.Forward().xz, direction), Is.GreaterThan(0.99f), string.Join("; ", trace));
+			Assert.That(math.length(manager.GetComponentData<PhysicsVelocity>(_character).Linear.xz), Is.GreaterThan(_configuration.Locomotion.RunSpeed * 0.8f), string.Join("; ", trace));
 		}
 
 		[TestCase(-1f)]
@@ -77,7 +177,7 @@ namespace ColInt.MMD.Tests {
 		public void BackwardSprintFromIdleStillUsesTurningStarts(float side) {
 			CreateFlatCharacter();
 			float angle = side * math.PI * 0.75f;
-			_sample.SetInput(new MmdSampleInput { Movement = new float2(math.sin(angle), math.cos(angle)), Sprint = true });
+			_sample.World.EntityManager.SetComponentData(_character, new MmdSampleInput { Movement = new float2(math.sin(angle), math.cos(angle)), Sprint = true });
 			_sample.Tick();
 			var manager = _sample.World.EntityManager;
 			var data = manager.GetComponentData<MmdDatabase>(_character).Value;

@@ -23,12 +23,11 @@ namespace ColInt.MMD.Samples.Character.Movement.JumpState.Systems {
 			if (SystemAPI.GetSingleton<MmdWorldState>().IsPaused) {
 				return;
 			}
-			var input = SystemAPI.GetSingleton<MmdSampleInput>();
 			float deltaTime = SystemAPI.Time.DeltaTime;
-			foreach (var (intent, ground, movement) in SystemAPI.Query<RefRW<MmdSampleJumpIntent>, RefRO<MmdSampleGroundState>,
-				RefRO<MmdSampleMovement>>().WithAll<MmdSampleCharacterControl>()) {
-				intent.ValueRW.Remaining = input.JumpPressed ? JumpBufferDuration : math.max(0f, intent.ValueRO.Remaining - deltaTime);
-				intent.ValueRW.TraversalRemaining = input.JumpPressed ? TraversalBufferDuration : math.max(0f, intent.ValueRO.TraversalRemaining - deltaTime);
+			foreach (var (intent, ground, movement, input) in SystemAPI.Query<RefRW<MmdSampleJumpIntent>, RefRO<MmdSampleGroundState>,
+				RefRO<MmdSampleMovement>, RefRO<MmdSampleInput>>().WithAll<MmdSampleCharacterControl>()) {
+				intent.ValueRW.Remaining = input.ValueRO.JumpPressed ? JumpBufferDuration : math.max(0f, intent.ValueRO.Remaining - deltaTime);
+				intent.ValueRW.TraversalRemaining = input.ValueRO.JumpPressed ? TraversalBufferDuration : math.max(0f, intent.ValueRO.TraversalRemaining - deltaTime);
 				intent.ValueRW.CoyoteRemaining = movement.ValueRO.IgnoreGround ? 0f :
 					ground.ValueRO.IsGrounded ? CoyoteDuration : math.max(0f, intent.ValueRO.CoyoteRemaining - deltaTime);
 			}

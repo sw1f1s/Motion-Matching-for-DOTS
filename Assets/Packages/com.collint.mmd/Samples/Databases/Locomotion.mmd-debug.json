@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Fingerprint": "ec8d29bfcfaa684fa7168ede1dab6be633046db365948daa8618bf493195c603",
+  "Fingerprint": "62af9ca3dd0d7714cc6d553f58f1ccc6ac93248899ea68717e3240228b5df871",
   "DatabasePath": "Assets/Packages/com.collint.mmd/Samples/Databases/Locomotion.bytes",
   "Names": [
     "M_Neutral_Stand_Idle_Loop",

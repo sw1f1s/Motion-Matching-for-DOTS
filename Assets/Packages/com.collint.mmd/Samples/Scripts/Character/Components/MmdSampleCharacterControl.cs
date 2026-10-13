@@ -12,5 +12,6 @@ namespace ColInt.MMD.Samples.Character.Components {
 		public int SprintGroup;
 		public int TurnGroup;
 		public int StartGroup;
+		public int ReversalGroup;
 	}
 }

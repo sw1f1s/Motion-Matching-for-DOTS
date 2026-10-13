@@ -14,7 +14,6 @@ using ColInt.MMD.Samples.Character.Movement.Shared.Components;
 using ColInt.MMD.Samples.Character.Movement.Shared.Helpers;
 using ColInt.MMD.Samples.Character.Movement.Shared.Systems;
 using Unity.Burst;
-using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Physics;
@@ -32,21 +31,16 @@ namespace ColInt.MMD.Samples.Character.Movement.LocomotionState.Systems {
 			if (SystemAPI.GetSingleton<MmdWorldState>().IsPaused) {
 				return;
 			}
-			state.Dependency = new StartJob {
-				Input = SystemAPI.GetSingleton<MmdSampleInput>(), CharacterInputs = SystemAPI.GetComponentLookup<MmdSampleCharacterInputOverride>(true)
-			}.ScheduleParallel(state.Dependency);
+			state.Dependency = new StartJob().ScheduleParallel(state.Dependency);
 		}
 
 		[BurstCompile]
 		[WithAll(typeof(MmdSampleStateStarted<MmdSampleLocomotion>))]
 		private partial struct StartJob : IJobEntity {
-			public MmdSampleInput Input;
-			[ReadOnly] public ComponentLookup<MmdSampleCharacterInputOverride> CharacterInputs;
 
-			private void Execute(Entity entity, in MmdDatabase data, in MmdSampleFall fall, in MmdSampleCharacterControl control,
+			private void Execute(in MmdSampleInput input, in MmdDatabase data, in MmdSampleFall fall, in MmdSampleCharacterControl control,
 				ref MmdSampleMovement movement, ref MmdSampleGroundState ground, ref MmdActionRequest request,
 				ref MmdSearchSettings settings, ref MmdPlayback playback, ref PhysicsVelocity velocity, ref MmdInertializationState smoothing, DynamicBuffer<MmdMotionGroup> groups) {
-				var input = CharacterInputs.HasComponent(entity) ? CharacterInputs[entity].Value : Input;
 				// The action has already completed its physical path. Released input must not
 				// inherit the source clip's running speed and select another moving stop.
 				if (data.Value.Value.Clips[playback.ClipIndex].ActionId != 0 && math.lengthsq(input.Movement) == 0f) {

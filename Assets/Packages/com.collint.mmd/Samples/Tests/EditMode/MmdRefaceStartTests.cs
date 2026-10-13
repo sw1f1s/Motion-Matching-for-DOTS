@@ -96,7 +96,7 @@ namespace ColInt.MMD.Tests {
 					float side = math.sign(MmdSampleFacing.YawError(initial.Rotation, direction));
 					float2 previousBody = new float2(0f, 1f);
 					float bodyTurn = 0f;
-					sample.SetInput(new MmdSampleInput { Movement = direction, Run = run });
+					sample.World.EntityManager.SetComponentData(actor, new MmdSampleInput { Movement = direction, Run = run });
 					bool selectedReface = false;
 					bool movedWhileTurning = false;
 					float3 start = manager.GetComponentData<LocalTransform>(actor).Position;

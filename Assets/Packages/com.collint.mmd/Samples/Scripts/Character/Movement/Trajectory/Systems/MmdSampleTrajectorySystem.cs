@@ -32,7 +32,7 @@ namespace ColInt.MMD.Samples.Character.Movement.Trajectory.Systems {
 				return;
 			}
 			state.Dependency = new TrajectoryPredictionJob {
-				Input = SystemAPI.GetSingleton<MmdSampleInput>(), CharacterInputs = SystemAPI.GetComponentLookup<MmdSampleCharacterInputOverride>(true), DeltaTime = SystemAPI.Time.DeltaTime,
+				DeltaTime = SystemAPI.Time.DeltaTime,
 				PhysicsRoots = SystemAPI.GetComponentLookup<MmdPhysicsRoot>(true)
 			}.ScheduleParallel(state.Dependency);
 		}
@@ -40,14 +40,11 @@ namespace ColInt.MMD.Samples.Character.Movement.Trajectory.Systems {
 		[BurstCompile]
 		[WithNone(typeof(MmdSampleState<MmdSampleSlide>), typeof(MmdSampleState<MmdSampleSlideExit>))]
 		private partial struct TrajectoryPredictionJob : IJobEntity {
-			public MmdSampleInput Input;
-			[ReadOnly] public ComponentLookup<MmdSampleCharacterInputOverride> CharacterInputs;
 			public float DeltaTime;
 			[ReadOnly] public ComponentLookup<MmdPhysicsRoot> PhysicsRoots;
 
-			private void Execute(Entity entity, in MmdSampleCharacterControl control, in LocalTransform transform, ref MmdSampleTrajectoryState trajectory,
+			private void Execute(in MmdSampleInput input, Entity entity, in MmdSampleCharacterControl control, in LocalTransform transform, ref MmdSampleTrajectoryState trajectory,
 				ref MmdSearchQuerySpace space, DynamicBuffer<MmdSearchQueryElement> query, DynamicBuffer<MmdTrajectoryPoint> points) {
-				var input = CharacterInputs.HasComponent(entity) ? CharacterInputs[entity].Value : Input;
 				space = new MmdSearchQuerySpace { Position = transform.Position, Rotation = transform.Rotation };
 				points.ResizeUninitialized(3);
 				float desiredSpeed = math.lengthsq(input.Movement) > 0f ? MmdSampleGait.Speed(control, input) : 0f;
@@ -60,6 +57,10 @@ namespace ColInt.MMD.Samples.Character.Movement.Trajectory.Systems {
 				query[14] = new MmdSearchQueryElement { Value = velocity.z };
 				float speed = math.length(trajectory.Velocity.xz);
 				bool backwardStart = speed < desiredSpeed * 0.15f && math.abs(error) > 2.0943951f;
+				bool movingReversal = control.ReversalGroup != 0 && control.RunGroup != control.WalkGroup &&
+					(input.Run || input.Sprint) && speed >= desiredSpeed * 0.15f && math.abs(error) > 2.0943951f;
+				float3 predictedVelocity = new float3(velocity.x, 0f, velocity.z);
+				float3 targetVelocity = math.rotate(math.inverse(transform.Rotation), new float3(facing.x, 0f, facing.y)) * desiredSpeed;
 				float3 position = float3.zero;
 				float previousTime = 0f;
 				for (int point = 0; point < 3; point++) {
@@ -68,6 +69,18 @@ namespace ColInt.MMD.Samples.Character.Movement.Trajectory.Systems {
 					for (int sample = 1; sample <= 8; sample++) {
 						float futureTime = previousTime + sample * step;
 						float futureYaw = math.clamp(error, -control.TurnSpeed * futureTime, control.TurnSpeed * futureTime);
+						if (movingReversal) {
+							// Brake along the incoming velocity before accelerating back along the requested path.
+							if (math.dot(predictedVelocity, targetVelocity) < 0f) {
+								float braking = math.min(math.length(predictedVelocity), 25f * step);
+								predictedVelocity -= math.normalizesafe(predictedVelocity) * braking;
+							} else {
+								float3 difference = targetVelocity - predictedVelocity;
+								predictedVelocity += math.normalizesafe(difference) * math.min(math.length(difference), 10f * step);
+							}
+							position += predictedVelocity * step;
+							continue;
+						}
 						// Brake for a reversal; accelerate as the predicted facing reaches the requested heading.
 						float targetSpeed = backwardStart ? desiredSpeed : desiredSpeed * math.saturate((math.cos(error - futureYaw) + 1f) * 0.5f);
 						speed += math.clamp(targetSpeed - speed, -10f * step, 10f * step);

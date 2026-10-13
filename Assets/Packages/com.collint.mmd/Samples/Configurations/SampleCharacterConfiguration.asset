@@ -38,6 +38,7 @@ MonoBehaviour:
     <SprintGroup>k__BackingField: Sprint
     <TurnGroup>k__BackingField: Turn
     <StartGroup>k__BackingField: Start
+    <ReversalGroup>k__BackingField: Reversal
   _transitions:
     <PoseDuration>k__BackingField: 0.2
     <IdlePoseDuration>k__BackingField: 0.35

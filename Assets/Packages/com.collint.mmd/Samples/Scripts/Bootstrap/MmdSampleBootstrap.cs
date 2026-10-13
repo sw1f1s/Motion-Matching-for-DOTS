@@ -1,3 +1,4 @@
+using ColInt.MMD.Samples.Character.Input.Components;
 using System.Collections.Generic;
 using System;
 using ColInt.MMD.Samples.Camera;
@@ -38,9 +39,10 @@ namespace ColInt.MMD.Samples.Bootstrap {
 				}
 				if (_playerCamera != null && ShouldInitialize(_playerCamera) && cameraPlayer != null) {
 					_playerCamera.Init(SampleWorld, cameraPlayer);
+					SampleWorld.World.EntityManager.SetComponentData(cameraPlayer.CharacterEntity, new MmdSamplePlayerInput { Camera = _playerCamera });
 				}
 				if (_simulationDriver != null && ShouldInitialize(_simulationDriver)) {
-					_simulationDriver.Init(SampleWorld, cameraPlayer != null ? _playerCamera : null);
+					_simulationDriver.Init(SampleWorld);
 				}
 			} catch (Exception exception) {
 				ResetSample();

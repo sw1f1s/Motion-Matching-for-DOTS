@@ -1,8 +1,20 @@
 using System.Runtime.CompilerServices;
+using ColInt.MMD.Database.Data;
+using ColInt.MMD.Playback.Helpers;
 using Unity.Mathematics;
 
 namespace ColInt.MMD.Samples.Character.Movement.Facing.Helpers {
 	public static class MmdSampleFacing {
+		public static bool IsHalfTurn(ref MotionDatabase database, in MotionClip clip) {
+			if (clip.Loop) {
+				return false;
+			}
+			quaternion first = database.Frames[clip.FirstFrame].Root.rot;
+			quaternion last = database.Frames[clip.FirstFrame + clip.FrameCount - 1].Root.rot;
+			float yaw = MmdAnimationMath.RotationVector(math.mul(math.inverse(first), last)).y;
+			return math.abs(yaw) > 2.0943951f;
+		}
+
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static float2 Resolve(float2 movement) {
 			return math.normalizesafe(movement);

@@ -31,14 +31,14 @@ namespace ColInt.MMD.Samples.Benchmark.Systems {
 		private partial struct TargetJob : IJobEntity {
 			public MmdSampleBenchmarkArea Area;
 
-			private void Execute(in LocalTransform transform, ref MmdSampleBenchmarkAgent agent, ref MmdSampleCharacterInputOverride input) {
+			private void Execute(in LocalTransform transform, ref MmdSampleBenchmarkAgent agent, ref MmdSampleInput input) {
 				if (math.distancesq(transform.Position.xz, agent.Target.xz) <= Area.ArrivalRadius * Area.ArrivalRadius) {
 					// Sample from the previous goal so contact timing cannot change the random sequence.
 					agent.Target = MmdSampleBenchmarkRandom.Target(ref agent.Random, Area, agent.Target);
 					agent.CompletedTargets++;
 				}
 				float2 direction = math.normalizesafe(agent.Target.xz - transform.Position.xz);
-				input.Value = new MmdSampleInput { Movement = direction, Facing = direction, Run = true };
+				input = new MmdSampleInput { Movement = direction, Facing = direction, Run = true };
 			}
 		}
 	}

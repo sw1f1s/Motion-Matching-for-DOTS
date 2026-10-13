@@ -36,7 +36,7 @@ namespace ColInt.MMD.Tests {
 						AddStatic(manager, floor);
 						AddStatic(manager, wall);
 						var actor = sample.Characters.Create(configuration, LocalTransform.Identity, true, false);
-						sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Run = run });
+						sample.World.EntityManager.SetComponentData(actor, new MmdSampleInput { Movement = new float2(0f, 1f), Run = run });
 						for (int tick = 0; tick < 480; tick++) {
 							sample.Tick();
 						}
@@ -49,7 +49,7 @@ namespace ColInt.MMD.Tests {
 						int turnTicks = 0;
 						bool movedWhileTurning = false;
 						float3 initialPosition = manager.GetComponentData<LocalTransform>(actor).Position;
-						sample.SetInput(new MmdSampleInput { Movement = movement, Run = run });
+						sample.World.EntityManager.SetComponentData(actor, new MmdSampleInput { Movement = movement, Run = run });
 						for (int tick = 0; tick < 240; tick++) {
 							sample.Tick();
 							var settings = manager.GetComponentData<MmdSearchSettings>(actor);
@@ -101,7 +101,7 @@ namespace ColInt.MMD.Tests {
 						AddStatic(manager, floor);
 						AddStatic(manager, wall);
 						var actor = sample.Characters.Create(configuration, LocalTransform.Identity, true, false);
-						sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f), Run = true });
+						sample.World.EntityManager.SetComponentData(actor, new MmdSampleInput { Movement = new float2(0f, 1f), Run = true });
 						for (int tick = 0; tick < 480; tick++) {
 							sample.Tick();
 						}
@@ -111,7 +111,7 @@ namespace ColInt.MMD.Tests {
 						for (int tick = 0; tick < 360; tick++) {
 							float angle = math.radians(30f) * math.min(tick / 180f, 1f);
 							var direction = new float2(math.sin(angle), math.cos(angle));
-							sample.SetInput(new MmdSampleInput { Movement = direction, Facing = direction, Run = true });
+							sample.World.EntityManager.SetComponentData(actor, new MmdSampleInput { Movement = direction, Facing = direction, Run = true });
 							sample.Tick();
 							int group = MmdMotionGroups.First(manager.GetBuffer<MmdMotionGroup>(actor), MmdMotionGroupUsage.Required, control.StartGroup);
 							if (group != previousGroup) {

@@ -32,7 +32,7 @@ namespace ColInt.MMD.Samples.Character.Movement.TraversalState.Systems {
 				return;
 			}
 			state.Dependency = new ContactJob {
-				Input = SystemAPI.GetSingleton<MmdSampleInput>(), DeltaTime = SystemAPI.Time.DeltaTime
+				DeltaTime = SystemAPI.Time.DeltaTime
 			}.ScheduleParallel(state.Dependency);
 		}
 
@@ -40,10 +40,9 @@ namespace ColInt.MMD.Samples.Character.Movement.TraversalState.Systems {
 		[WithAll(typeof(MmdSampleTraversalActive))]
 		[WithNone(typeof(MmdSampleTraversalBlocked))]
 		private partial struct ContactJob : IJobEntity {
-			public MmdSampleInput Input;
 			public float DeltaTime;
 
-			private void Execute(in MmdDatabase data, in MmdPlayback playback, in LocalTransform transform,
+			private void Execute(in MmdSampleInput input, in MmdDatabase data, in MmdPlayback playback, in LocalTransform transform,
 				in MmdSampleTraversalTarget target, in MmdSampleTraversalProgress progress, in MmdSampleTraversalSettings settings,
 				in MmdSampleFootContact contact, ref MmdInertializationState smoothing,
 				DynamicBuffer<MmdLocalPose> poses, DynamicBuffer<MmdInertialPose> history) {
@@ -51,7 +50,7 @@ namespace ColInt.MMD.Samples.Character.Movement.TraversalState.Systems {
 					return;
 				}
 				ref var database = ref data.Value.Value;
-				bool continuing = target.Supported && math.dot(Input.Movement, math.forward(target.Rotation).xz) > 0.5f;
+				bool continuing = target.Supported && math.dot(input.Movement, math.forward(target.Rotation).xz) > 0.5f;
 				float3 position = MmdSampleTraversalPath.Position(ref database, target, progress.Clip, playback.Time, continuing);
 				quaternion rotation = MmdSampleTraversalPath.Rotation(target, progress.Clip, playback.Time, settings.AlignmentDuration);
 				bool left = Solve(ref database, poses, database.LeftFootBone, contact.LeftToe, position, rotation, transform.Scale, target, settings.Skin);

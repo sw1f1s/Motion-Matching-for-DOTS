@@ -293,7 +293,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ed21fd5d5d7714893901847b637e99c5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: ColInt.MMD.Samples::ColInt.MMD.Samples.Simulation.MmdSampleSimulationDriver
-  _readPlayerInput: 0
   _maximumTicksPerFrame: 2
 --- !u!4 &404343984
 Transform:

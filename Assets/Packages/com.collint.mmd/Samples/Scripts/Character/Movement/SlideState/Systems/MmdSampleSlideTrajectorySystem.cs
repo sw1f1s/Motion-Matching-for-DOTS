@@ -33,7 +33,6 @@ namespace ColInt.MMD.Samples.Character.Movement.SlideState.Systems {
 				return;
 			}
 			state.Dependency = new PredictionJob {
-				Input = SystemAPI.GetSingleton<MmdSampleInput>(), CharacterInputs = SystemAPI.GetComponentLookup<MmdSampleCharacterInputOverride>(true),
 				World = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld, Gravity = math.abs(SystemAPI.GetSingleton<PhysicsStep>().Gravity.y),
 				Exits = SystemAPI.GetComponentLookup<MmdSampleState<MmdSampleSlideExit>>(true)
 			}.ScheduleParallel(state.Dependency);
@@ -42,18 +41,15 @@ namespace ColInt.MMD.Samples.Character.Movement.SlideState.Systems {
 		[BurstCompile]
 		[WithAny(typeof(MmdSampleState<MmdSampleSlide>), typeof(MmdSampleState<MmdSampleSlideExit>))]
 		private partial struct PredictionJob : IJobEntity {
-			public MmdSampleInput Input;
-			[ReadOnly] public ComponentLookup<MmdSampleCharacterInputOverride> CharacterInputs;
 			[ReadOnly] public CollisionWorld World;
 			[ReadOnly] public ComponentLookup<MmdSampleState<MmdSampleSlideExit>> Exits;
 			public float Gravity;
 
-			private void Execute(Entity entity, in MmdSampleSlide slide, in MmdSampleSlideProgress progress, in MmdSampleGroundState ground,
+			private void Execute(in MmdSampleInput input, Entity entity, in MmdSampleSlide slide, in MmdSampleSlideProgress progress, in MmdSampleGroundState ground,
 				in MmdSampleMovementSettings settings, in PhysicsCollider collider, in LocalTransform transform, ref MmdSampleTrajectoryState trajectory,
 				ref MmdSearchQuerySpace space, DynamicBuffer<MmdSearchQueryElement> query, DynamicBuffer<MmdTrajectoryPoint> points) {
 				space = new MmdSearchQuerySpace { Position = transform.Position, Rotation = transform.Rotation };
 				bool exiting = Exits.HasComponent(entity);
-				var input = CharacterInputs.HasComponent(entity) ? CharacterInputs[entity].Value : Input;
 				float3 velocity = exiting ? float3.zero : progress.Velocity;
 				float3 normal = MmdSampleSlideMath.GroundNormal(World, entity, collider, transform, settings);
 				float3 localVelocity = math.rotate(math.inverse(transform.Rotation), velocity);

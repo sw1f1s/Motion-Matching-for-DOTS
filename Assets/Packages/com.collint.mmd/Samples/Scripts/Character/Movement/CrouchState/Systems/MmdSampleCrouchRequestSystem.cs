@@ -21,12 +21,9 @@ namespace ColInt.MMD.Samples.Character.Movement.CrouchState.Systems {
 			if (SystemAPI.GetSingleton<MmdWorldState>().IsPaused) {
 				return;
 			}
-			if (!SystemAPI.GetSingleton<MmdSampleInput>().Crouch) {
-				return;
-			}
-			foreach (var (ground, transition) in SystemAPI.Query<RefRO<MmdSampleGroundState>, RefRW<MmdSampleStateTransition>>()
+			foreach (var (ground, transition, input) in SystemAPI.Query<RefRO<MmdSampleGroundState>, RefRW<MmdSampleStateTransition>, RefRO<MmdSampleInput>>()
 				.WithAll<MmdSampleCharacterControl, MmdSampleCrouch, MmdSampleState<MmdSampleLocomotion>>()) {
-				if (ground.ValueRO.IsGrounded) {
+				if (input.ValueRO.Crouch && !input.ValueRO.Sprint && ground.ValueRO.IsGrounded) {
 					transition.ValueRW.Request<MmdSampleCrouchEnter>(MmdSampleStatePriority.Crouch);
 				}
 			}

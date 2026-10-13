@@ -7,7 +7,6 @@ using ColInt.MMD.Samples.Character.Movement.Shared.Helpers;
 using ColInt.MMD.Samples.Character.Movement.Shared.Systems;
 using ColInt.MMD.Samples.Character.Movement.SlideState.Components;
 using Unity.Burst;
-using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Physics;
@@ -27,20 +26,14 @@ namespace ColInt.MMD.Samples.Character.Movement.SlideState.Systems {
 			if (SystemAPI.GetSingleton<MmdWorldState>().IsPaused) {
 				return;
 			}
-			state.Dependency = new UpdateJob {
-				Input = SystemAPI.GetSingleton<MmdSampleInput>(),
-				CharacterInputs = SystemAPI.GetComponentLookup<MmdSampleCharacterInputOverride>(true)
-			}.ScheduleParallel(state.Dependency);
+			state.Dependency = new UpdateJob().ScheduleParallel(state.Dependency);
 		}
 
 		[BurstCompile]
 		[WithAll(typeof(MmdSampleCharacterControl), typeof(MmdSampleState<MmdSampleLocomotion>))]
 		private partial struct UpdateJob : IJobEntity {
-			public MmdSampleInput Input;
-			[ReadOnly] public ComponentLookup<MmdSampleCharacterInputOverride> CharacterInputs;
-			private void Execute(Entity entity, in MmdSampleSlide slide, in MmdSampleGroundState ground, in PhysicsVelocity velocity, ref MmdSampleStateTransition transition) {
-				var input = CharacterInputs.HasComponent(entity) ? CharacterInputs[entity].Value : Input;
-				if (input.Crouch && input.CrouchPressed && input.Sprint && ground.IsGrounded && math.length(velocity.Linear.xz) >= slide.MinimumEntrySpeed) {
+			private void Execute(in MmdSampleInput input, in MmdSampleSlide slide, in MmdSampleGroundState ground, in PhysicsVelocity velocity, ref MmdSampleStateTransition transition) {
+				if (input.CrouchPressed && input.Sprint && ground.IsGrounded && math.length(velocity.Linear.xz) >= slide.MinimumEntrySpeed) {
 					transition.Request<MmdSampleSlide>(MmdSampleStatePriority.Slide);
 				}
 			}

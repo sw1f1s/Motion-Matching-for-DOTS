@@ -30,8 +30,6 @@ namespace ColInt.MMD.Samples.Character.Movement.Shared.Systems {
 			var commands = SystemAPI.GetSingleton<EndFixedStepSimulationEntityCommandBufferSystem.Singleton>()
 				.CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
 			state.Dependency = new MovementJob {
-				Input = SystemAPI.GetSingleton<MmdSampleInput>(),
-				CharacterInputs = SystemAPI.GetComponentLookup<MmdSampleCharacterInputOverride>(true),
 				Impulses = SystemAPI.GetComponentLookup<MmdSampleJumpImpulse>(true),
 				Controls = SystemAPI.GetComponentLookup<MmdSampleCharacterControl>(true),
 				Gravity = math.abs(SystemAPI.GetSingleton<PhysicsStep>().Gravity.y),
@@ -41,15 +39,13 @@ namespace ColInt.MMD.Samples.Character.Movement.Shared.Systems {
 
 		[BurstCompile]
 		private partial struct MovementJob : IJobEntity {
-			public MmdSampleInput Input;
-			[ReadOnly] public ComponentLookup<MmdSampleCharacterInputOverride> CharacterInputs;
 			[ReadOnly] public ComponentLookup<MmdSampleJumpImpulse> Impulses;
 			[ReadOnly] public ComponentLookup<MmdSampleCharacterControl> Controls;
 			public float Gravity;
 			public float DeltaTime;
 			public EntityCommandBuffer.ParallelWriter Commands;
 
-			private void Execute([ChunkIndexInQuery] int sortKey, Entity entity, ref PhysicsVelocity velocity, ref MmdSampleMovement movement,
+			private void Execute(in MmdSampleInput input, [ChunkIndexInQuery] int sortKey, Entity entity, ref PhysicsVelocity velocity, ref MmdSampleMovement movement,
 				ref MmdSampleGroundState ground, in MmdSampleMovementSettings settings) {
 				if (Impulses.HasComponent(entity)) {
 					velocity.Linear.y = math.sqrt(2f * Gravity * settings.JumpHeight);
@@ -59,8 +55,7 @@ namespace ColInt.MMD.Samples.Character.Movement.Shared.Systems {
 				if (movement.AirControl) {
 					float2 planar = movement.AirVelocity;
 					if (Controls.HasComponent(entity)) {
-						var input = CharacterInputs.HasComponent(entity) ? CharacterInputs[entity].Value : Input;
-						float speed = MmdSampleGait.Speed(settings, input);
+								float speed = MmdSampleGait.Speed(settings, input);
 						float2 desired = input.Movement * speed;
 						float2 change = desired - planar;
 						planar += math.normalizesafe(change) * math.min(math.length(change), settings.AirAcceleration * DeltaTime);

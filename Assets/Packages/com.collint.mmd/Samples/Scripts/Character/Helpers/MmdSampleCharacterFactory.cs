@@ -58,11 +58,12 @@ namespace ColInt.MMD.Samples.Character.Helpers {
 					manager.AddBuffer<MmdInertialPose>(entity);
 				}
 				if (playerControlled) {
+					manager.AddComponent<MmdSamplePlayerInput>(entity);
 					manager.AddComponentData(entity, new MmdSampleCharacterControl {
 						WalkSpeed = configuration.Locomotion.WalkSpeed, RunSpeed = configuration.Locomotion.RunSpeed, SprintSpeed = configuration.Locomotion.SprintSpeed, TurnSpeed = configuration.Locomotion.TurnSpeed,
 						IdleGroup = ResolveGroup(database, configuration.Locomotion.IdleGroup), WalkGroup = ResolveGroup(database, configuration.Locomotion.WalkGroup),
 						RunGroup = ResolveGroup(database, configuration.Locomotion.RunGroup), SprintGroup = ResolveGroup(database, configuration.Locomotion.SprintGroup), TurnGroup = ResolveGroup(database, configuration.Locomotion.TurnGroup),
-						StartGroup = ResolveGroup(database, configuration.Locomotion.StartGroup)
+						StartGroup = ResolveGroup(database, configuration.Locomotion.StartGroup), ReversalGroup = ResolveGroup(database, configuration.Locomotion.ReversalGroup)
 					});
 				}
 				if (database.IsCreated) {
@@ -86,7 +87,7 @@ namespace ColInt.MMD.Samples.Character.Helpers {
 		public Entity CreateAutonomous(MmdSampleCharacterConfiguration configuration, in LocalTransform spawnTransform) {
 			Entity entity = Create(configuration, spawnTransform, true, false);
 			try {
-				_world.EntityManager.AddComponent<MmdSampleCharacterInputOverride>(entity);
+				_world.EntityManager.RemoveComponent<MmdSamplePlayerInput>(entity);
 				return entity;
 			} catch {
 				_world.EntityManager.DestroyEntity(entity);
@@ -105,6 +106,7 @@ namespace ColInt.MMD.Samples.Character.Helpers {
 			Entity entity = manager.CreateEntity(typeof(LocalTransform));
 			try {
 				manager.SetComponentData(entity, spawnTransform);
+				manager.AddComponentData(entity, new MmdSampleInput { Run = true });
 				manager.AddBuffer<MmdMotionGroup>(entity);
 				manager.AddComponent<MmdSampleTrajectoryState>(entity);
 				manager.AddComponent<MmdActionState>(entity);

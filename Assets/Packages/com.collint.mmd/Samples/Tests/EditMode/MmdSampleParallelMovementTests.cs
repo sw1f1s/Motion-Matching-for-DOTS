@@ -18,18 +18,15 @@ namespace ColInt.MMD.Tests {
 				var entities = new Entity[count];
 				for (int index = 0; index < count; index++) {
 					Entity entity = manager.CreateEntity(typeof(PhysicsVelocity), typeof(MmdSampleMovement), typeof(MmdSampleGroundState),
-						typeof(MmdSampleMovementSettings), typeof(MmdSampleCharacterControl), typeof(MmdSampleCharacterInputOverride), typeof(MmdSampleJumpImpulse));
+						typeof(MmdSampleMovementSettings), typeof(MmdSampleCharacterControl), typeof(MmdSampleInput), typeof(MmdSampleJumpImpulse));
 					entities[index] = entity;
 					manager.SetComponentData(entity, new MmdSampleMovement { AirControl = true, IgnoreGround = true });
 					manager.SetComponentData(entity, new MmdSampleMovementSettings {
 						JumpHeight = 2f, AirAcceleration = 6f, MaximumFallSpeed = 55f, WalkSpeed = 2f, RunSpeed = 4f
 					});
-					manager.SetComponentData(entity, new MmdSampleCharacterInputOverride {
-						Value = new MmdSampleInput { Movement = index % 2 == 0 ? new float2(1f, 0f) : new float2(-1f, 0f), Run = true }
-					});
+					manager.SetComponentData(entity, new MmdSampleInput { Movement = index % 2 == 0 ? new float2(1f, 0f) : new float2(-1f, 0f), Run = true });
 				}
 				manager.AddComponent<Disabled>(entities[0]);
-				sample.SetInput(new MmdSampleInput { Movement = new float2(0f, 1f) });
 				sample.Tick();
 				float impulse = math.sqrt(4f * math.abs(PhysicsStep.Default.Gravity.y));
 				for (int index = 1; index < count; index++) {

@@ -3,10 +3,12 @@ using ColInt.MMD.Samples.Character.Components;
 using ColInt.MMD.Samples.Character.Input.Components;
 using ColInt.MMD.Samples.Character.Movement.JumpState.Components;
 using ColInt.MMD.Samples.Character.Movement.Shared.Components;
+using Unity.Burst;
 using Unity.Entities;
 using Unity.Mathematics;
 
 namespace ColInt.MMD.Samples.Character.Movement.JumpState.Systems {
+	[BurstCompile]
 	[DisableAutoCreation]
 	[UpdateInGroup(typeof(MmdSampleJumpIntentGroup))]
 	public partial struct MmdSampleJumpIntentSystem : ISystem {
@@ -19,17 +21,23 @@ namespace ColInt.MMD.Samples.Character.Movement.JumpState.Systems {
 			state.RequireForUpdate<MmdSampleInput>();
 		}
 
+		[BurstCompile]
 		public void OnUpdate(ref SystemState state) {
 			if (SystemAPI.GetSingleton<MmdWorldState>().IsPaused) {
 				return;
 			}
-			float deltaTime = SystemAPI.Time.DeltaTime;
-			foreach (var (intent, ground, movement, input) in SystemAPI.Query<RefRW<MmdSampleJumpIntent>, RefRO<MmdSampleGroundState>,
-				RefRO<MmdSampleMovement>, RefRO<MmdSampleInput>>().WithAll<MmdSampleCharacterControl>()) {
-				intent.ValueRW.Remaining = input.ValueRO.JumpPressed ? JumpBufferDuration : math.max(0f, intent.ValueRO.Remaining - deltaTime);
-				intent.ValueRW.TraversalRemaining = input.ValueRO.JumpPressed ? TraversalBufferDuration : math.max(0f, intent.ValueRO.TraversalRemaining - deltaTime);
-				intent.ValueRW.CoyoteRemaining = movement.ValueRO.IgnoreGround ? 0f :
-					ground.ValueRO.IsGrounded ? CoyoteDuration : math.max(0f, intent.ValueRO.CoyoteRemaining - deltaTime);
+			state.Dependency = new JumpIntentJob { DeltaTime = SystemAPI.Time.DeltaTime }.ScheduleParallel(state.Dependency);
+		}
+
+		[BurstCompile]
+		[WithAll(typeof(MmdSampleCharacterControl))]
+		private partial struct JumpIntentJob : IJobEntity {
+			public float DeltaTime;
+
+			private void Execute(ref MmdSampleJumpIntent intent, in MmdSampleGroundState ground, in MmdSampleMovement movement, in MmdSampleInput input) {
+				intent.Remaining = input.JumpPressed ? JumpBufferDuration : math.max(0f, intent.Remaining - DeltaTime);
+				intent.TraversalRemaining = input.JumpPressed ? TraversalBufferDuration : math.max(0f, intent.TraversalRemaining - DeltaTime);
+				intent.CoyoteRemaining = movement.IgnoreGround ? 0f : ground.IsGrounded ? CoyoteDuration : math.max(0f, intent.CoyoteRemaining - DeltaTime);
 			}
 		}
 	}

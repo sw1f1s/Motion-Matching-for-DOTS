@@ -5,10 +5,12 @@ using ColInt.MMD.Samples.Character.Movement.Shared.Components;
 using ColInt.MMD.Samples.Character.Movement.Shared.Helpers;
 using ColInt.MMD.Samples.Character.Movement.Shared.Systems;
 using ColInt.MMD.Samples.Character.Movement.TraversalState.Components;
+using Unity.Burst;
 using Unity.Entities;
 using Unity.Physics;
 
 namespace ColInt.MMD.Samples.Character.Movement.FallState.Systems {
+	[BurstCompile]
 	[DisableAutoCreation]
 	[UpdateInGroup(typeof(MmdSampleStateRequestGroup))]
 	public partial struct MmdSampleFallRequestSystem : ISystem {
@@ -16,15 +18,21 @@ namespace ColInt.MMD.Samples.Character.Movement.FallState.Systems {
 			state.RequireForUpdate<MmdWorldState>();
 		}
 
+		[BurstCompile]
 		public void OnUpdate(ref SystemState state) {
 			if (SystemAPI.GetSingleton<MmdWorldState>().IsPaused) {
 				return;
 			}
-			foreach (var (ground, velocity, settings, transition) in SystemAPI.Query<RefRO<MmdSampleGroundState>, RefRO<PhysicsVelocity>,
-				RefRO<MmdSampleMovementSettings>, RefRW<MmdSampleStateTransition>>().WithAll<MmdSampleFall>()
-				.WithNone<MmdSampleState<MmdSampleJump>, MmdSampleState<MmdSampleFall>, MmdSampleTraversalActive>()) {
-				if (!ground.ValueRO.IsGrounded && velocity.ValueRO.Linear.y <= -settings.ValueRO.FallEntrySpeed) {
-					transition.ValueRW.Request<MmdSampleFall>(MmdSampleStatePriority.Fall);
+			state.Dependency = new RequestJob().ScheduleParallel(state.Dependency);
+		}
+
+		[BurstCompile]
+		[WithAll(typeof(MmdSampleFall))]
+		[WithNone(typeof(MmdSampleState<MmdSampleJump>), typeof(MmdSampleState<MmdSampleFall>), typeof(MmdSampleTraversalActive))]
+		private partial struct RequestJob : IJobEntity {
+			private void Execute(in MmdSampleGroundState ground, in PhysicsVelocity velocity, in MmdSampleMovementSettings settings, ref MmdSampleStateTransition transition) {
+				if (!ground.IsGrounded && velocity.Linear.y <= -settings.FallEntrySpeed) {
+					transition.Request<MmdSampleFall>(MmdSampleStatePriority.Fall);
 				}
 			}
 		}

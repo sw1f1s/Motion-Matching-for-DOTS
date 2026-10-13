@@ -14,6 +14,7 @@ using ColInt.MMD.Samples.Character.Movement.Shared.Systems;
 using ColInt.MMD.Samples.Character.Movement.TraversalState.Components;
 using ColInt.MMD.Samples.Character.Movement.TraversalState.Helpers;
 using ColInt.MMD.Samples.Physics.Components;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -21,6 +22,7 @@ using Unity.Physics;
 using Unity.Transforms;
 
 namespace ColInt.MMD.Samples.Character.Movement.TraversalState.Systems {
+	[BurstCompile]
 	[DisableAutoCreation]
 	[UpdateInGroup(typeof(MmdSampleStateRequestGroup))]
 	public partial struct MmdSampleTraversalRequestSystem : ISystem {
@@ -32,14 +34,16 @@ namespace ColInt.MMD.Samples.Character.Movement.TraversalState.Systems {
 			state.RequireForUpdate<PhysicsStep>();
 		}
 
+		[BurstCompile]
 		public void OnUpdate(ref SystemState state) {
 			if (SystemAPI.GetSingleton<MmdWorldState>().IsPaused) {
 				return;
 			}
 			state.Dependency = new RequestJob { World = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld,
-				Gravity = math.abs(SystemAPI.GetSingleton<PhysicsStep>().Gravity.y) }.Schedule(state.Dependency);
+				Gravity = math.abs(SystemAPI.GetSingleton<PhysicsStep>().Gravity.y) }.ScheduleParallel(state.Dependency);
 		}
 
+		[BurstCompile]
 		[WithAny(typeof(MmdSampleState<MmdSampleLocomotion>), typeof(MmdSampleState<MmdSampleJump>), typeof(MmdSampleState<MmdSampleFall>), typeof(MmdSampleState<MmdSampleLanding>))]
 		private partial struct RequestJob : IJobEntity {
 			public float Gravity;

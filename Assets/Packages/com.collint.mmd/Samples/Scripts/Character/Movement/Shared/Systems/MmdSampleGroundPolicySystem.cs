@@ -1,10 +1,12 @@
 using ColInt.MMD.Lifecycle.Components;
 using ColInt.MMD.Physics.Components;
 using ColInt.MMD.Samples.Character.Movement.Shared.Components;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 
 namespace ColInt.MMD.Samples.Character.Movement.Shared.Systems {
+	[BurstCompile]
 	[DisableAutoCreation]
 	[UpdateInGroup(typeof(MmdSampleStatePolicyGroup))]
 	public partial struct MmdSampleGroundPolicySystem : ISystem {
@@ -12,21 +14,36 @@ namespace ColInt.MMD.Samples.Character.Movement.Shared.Systems {
 			state.RequireForUpdate<MmdWorldState>();
 		}
 
+		[BurstCompile]
 		public void OnUpdate(ref SystemState state) {
 			if (SystemAPI.GetSingleton<MmdWorldState>().IsPaused) {
 				return;
 			}
-			using var commands = new EntityCommandBuffer(Allocator.Temp);
-			var groundModes = SystemAPI.GetComponentLookup<MmdGroundMovement>(true);
-			foreach (var (movement, settings, entity) in SystemAPI.Query<RefRO<MmdSampleMovement>, RefRO<MmdSampleMovementSettings>>().WithEntityAccess()) {
-				bool hasGround = groundModes.HasComponent(entity);
-				if (movement.ValueRO.IgnoreGround && hasGround) {
-					commands.RemoveComponent<MmdGroundMovement>(entity);
-				} else if (!movement.ValueRO.IgnoreGround && !hasGround) {
-					commands.AddComponent(entity, settings.ValueRO.Ground);
+			// Structural commands must observe completed writers from the preceding phase.
+			state.CompleteDependency();
+			using var commands = new EntityCommandBuffer(Allocator.TempJob);
+			new GroundPolicyJob {
+				Commands = commands,
+				GroundModes = SystemAPI.GetComponentLookup<MmdGroundMovement>(true)
+			}.Run();
+			if (!commands.IsEmpty) {
+				commands.Playback(state.EntityManager);
+			}
+		}
+
+		[BurstCompile]
+		private partial struct GroundPolicyJob : IJobEntity {
+			public EntityCommandBuffer Commands;
+			[ReadOnly] public ComponentLookup<MmdGroundMovement> GroundModes;
+
+			private void Execute(Entity entity, in MmdSampleMovement movement, in MmdSampleMovementSettings settings) {
+				bool hasGround = GroundModes.HasComponent(entity);
+				if (movement.IgnoreGround && hasGround) {
+					Commands.RemoveComponent<MmdGroundMovement>(entity);
+				} else if (!movement.IgnoreGround && !hasGround) {
+					Commands.AddComponent(entity, settings.Ground);
 				}
 			}
-			commands.Playback(state.EntityManager);
 		}
 	}
 }

@@ -1,9 +1,11 @@
 using ColInt.MMD.Lifecycle.Components;
 using ColInt.MMD.Samples.Character.Movement.Shared.Components;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 
 namespace ColInt.MMD.Samples.Character.Movement.Shared.Systems {
+	[BurstCompile]
 	[DisableAutoCreation]
 	[UpdateInGroup(typeof(MmdSampleStateCleanupGroup))]
 	public partial struct MmdSampleStateCleanupSystem : ISystem {
@@ -11,17 +13,29 @@ namespace ColInt.MMD.Samples.Character.Movement.Shared.Systems {
 			state.RequireForUpdate<MmdWorldState>();
 		}
 
+		[BurstCompile]
 		public void OnUpdate(ref SystemState state) {
 			if (SystemAPI.GetSingleton<MmdWorldState>().IsPaused) {
 				return;
 			}
-			using var commands = new EntityCommandBuffer(Allocator.Temp);
-			foreach (var (machine, entity) in SystemAPI.Query<RefRO<MmdSampleStateMachine>>().WithAll<MmdSampleStateEntering>().WithEntityAccess()) {
-				commands.RemoveComponent(entity, machine.ValueRO.Current.Started);
-				commands.RemoveComponent<MmdSampleStateEntering>(entity);
+			// Structural commands must observe completed writers from the preceding phase.
+			state.CompleteDependency();
+			using var commands = new EntityCommandBuffer(Allocator.TempJob);
+			new CleanupJob { Commands = commands }.Run();
+			if (!commands.IsEmpty) {
+				commands.Playback(state.EntityManager);
 			}
-			commands.Playback(state.EntityManager);
+		}
 
+		[BurstCompile]
+		[WithAll(typeof(MmdSampleStateEntering))]
+		private partial struct CleanupJob : IJobEntity {
+			public EntityCommandBuffer Commands;
+
+			private void Execute(Entity entity, in MmdSampleStateMachine machine) {
+				Commands.RemoveComponent(entity, machine.Current.Started);
+				Commands.RemoveComponent<MmdSampleStateEntering>(entity);
+			}
 		}
 	}
 }

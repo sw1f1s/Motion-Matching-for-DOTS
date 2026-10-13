@@ -14,6 +14,7 @@ using Unity.Burst;
 using Unity.Entities;
 
 namespace ColInt.MMD.Samples.Character.Movement.JumpState.Systems {
+	[BurstCompile]
 	[DisableAutoCreation]
 	[UpdateInGroup(typeof(MmdSampleStateRequestGroup))]
 	public partial struct MmdSampleJumpRequestSystem : ISystem {
@@ -22,6 +23,7 @@ namespace ColInt.MMD.Samples.Character.Movement.JumpState.Systems {
 			state.RequireForUpdate<MmdSampleInput>();
 		}
 
+		[BurstCompile]
 		public void OnUpdate(ref SystemState state) {
 			if (SystemAPI.GetSingleton<MmdWorldState>().IsPaused) {
 				return;

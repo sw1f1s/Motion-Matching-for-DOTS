@@ -1,3 +1,4 @@
+using ColInt.MMD.Database.Data;
 using ColInt.MMD.Actions.Components;
 using ColInt.MMD.Database.Components;
 using ColInt.MMD.Lifecycle.Components;
@@ -37,10 +38,14 @@ namespace ColInt.MMD.Actions.Systems {
 					playback.SearchCountdown = 0f;
 					return;
 				}
+				if (request.ActionId < 0) {
+					action.Rejected = true;
+					return;
+				}
 				ref var database = ref data.Value.Value;
 				int selected = -1;
 				for (int i = 0; i < database.Clips.Length; i++) {
-					if (database.Clips[i].ActionId == request.ActionId &&
+					if (database.Clips[i].Mode == MotionPlaybackMode.Action && database.Clips[i].ActionId == request.ActionId &&
 						(request.PreferredClip < 0 || request.PreferredClip == i)) {
 						selected = i;
 						break;

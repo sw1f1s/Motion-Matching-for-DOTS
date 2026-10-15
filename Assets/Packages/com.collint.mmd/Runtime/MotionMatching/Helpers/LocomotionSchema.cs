@@ -75,7 +75,7 @@ namespace ColInt.MMD.MotionMatching.Helpers {
 			float amount = math.saturate((time - database.Frames[frame].Time) / (database.Frames[frame + 1].Time - database.Frames[frame].Time));
 			for (int i = 15; i < Dimension; i++) {
 				float value = math.lerp(database.Features[frame * Dimension + i], database.Features[(frame + 1) * Dimension + i], amount);
-				query[i] = new MmdSearchQueryElement { Value = value * (IsVelocityFeature(i) ? math.clamp(playback.Speed, 0f, 1f) : 1f) };
+				query[i] = new MmdSearchQueryElement { Value = value * (IsVelocityFeature(i) ? math.max(playback.Speed, 0f) : 1f) };
 			}
 		}
 
@@ -93,7 +93,7 @@ namespace ColInt.MMD.MotionMatching.Helpers {
 			}
 			int component = feature % 4;
 			float sample = (feature / 4 + 1) * speed;
-			int upper = math.min(2, (int)math.floor(sample));
+			int upper = sample >= 2f ? 2 : (int)math.floor(sample);
 			float fraction = sample - upper;
 			float2 lowerPosition = upper == 0 ? float2.zero : new float2(database.Features[offset + (upper - 1) * 4], database.Features[offset + (upper - 1) * 4 + 1]);
 			float2 upperPosition = new float2(database.Features[offset + upper * 4], database.Features[offset + upper * 4 + 1]);

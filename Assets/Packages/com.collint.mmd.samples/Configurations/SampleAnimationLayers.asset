@@ -1,0 +1,66 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5bd8a6423a75b4cec8b3e3d51476c4e2, type: 3}
+  m_Name: SampleAnimationLayers
+  m_EditorClassIdentifier: ColInt.MMD.Runtime::ColInt.MMD.Playback.Authoring.MmdAnimationLayersConfiguration
+  _database: {fileID: 4900000, guid: 9dea6a54777f94d8d9a9b682574e7a47, type: 3}
+  _layers:
+  - <Name>k__BackingField: Hammer Right Arm
+    <Mask>k__BackingField: {fileID: 11400000, guid: 234dbf0858dd74b9fa760228d4e87418, type: 2}
+    <ActiveGroups>k__BackingField:
+    - Idle
+    - Walk
+    - Run
+    - Turn
+    - Start
+    - Jump Stand
+    - Jump Walk
+    - Jump Run
+    - Fall
+    - Land Stand Light
+    - Land Walk Light
+    - Land Run Light
+    - Land Stand Heavy
+    - Land Walk Heavy
+    - Land Run Heavy
+    - Crouch Idle
+    - Crouch Move
+    - Crouch Turn
+    - Crouch Start
+    - Crouch Enter
+    - Crouch Exit
+    - TraversalMantle
+    - TraversalClimb
+    - TraversalVault
+    - TraversalHurdle
+    - TraversalCatchMantle
+    - TraversalCatchCliff
+    - TraversalCatchVault
+    - TraversalCatchHurdle
+    - Sprint
+    - Slide Enter
+    - Slide
+    - Reversal
+    <Source>k__BackingField: 1
+    <Group>k__BackingField: Hammer Run
+    <ClipInGroup>k__BackingField: 0
+    <Matching>k__BackingField:
+      <Interval>k__BackingField: 0.1
+      <SwitchPenalty>k__BackingField: 1
+      <MinimumRemainingTime>k__BackingField: 0.1
+      <MinimumSwitchTime>k__BackingField: 0.2
+      <TransitionDuration>k__BackingField: 0.2
+    <Time>k__BackingField: 0
+    <Speed>k__BackingField: 0.1
+    <Weight>k__BackingField: 0.75
+    <FadeDuration>k__BackingField: 0.6
+    <Channels>k__BackingField: 3

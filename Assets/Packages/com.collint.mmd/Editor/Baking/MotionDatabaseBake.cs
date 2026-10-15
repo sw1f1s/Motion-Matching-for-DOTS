@@ -71,7 +71,7 @@ namespace ColInt.MMD.Editor.Baking {
 				for (int clipIndex = 0; clipIndex < selection.Clips.Length; clipIndex++) {
 					cancellation.ThrowIfCancellationRequested();
 					MotionBakeClip source = selection.Clips[clipIndex];
-					if (source.Clip == null || source.Clip.length <= 0f || (source.ActionId != 0 && source.Loop)) {
+					if (source.Clip == null || source.Clip.length <= 0f || (source.ActionId > 0 && source.Loop)) {
 						throw new InvalidOperationException("Missing/empty animation or looping action.");
 					}
 					if (EditorUtility.DisplayCancelableProgressBar("MMD animation bake", source.Clip.name, (float)clipIndex / selection.Clips.Length)) {
@@ -165,7 +165,7 @@ namespace ColInt.MMD.Editor.Baking {
 						cancellation.ThrowIfCancellationRequested();
 						clips.Add(new MotionClipSource {
 							FirstFrame = first, FrameCount = samples, Duration = source.Clip.length,
-							SampleRate = configuration.SampleRate, Loop = source.Loop, Groups = source.Groups, ActionId = source.ActionId
+							SampleRate = configuration.SampleRate, Loop = source.Loop, Groups = source.Groups, ActionId = source.ActionId, Mode = source.Mode
 						});
 					} finally {
 						if (_activeSourceRoot != null) {

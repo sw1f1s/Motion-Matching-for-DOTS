@@ -5,5 +5,6 @@ namespace ColInt.MMD.Database.Data {
 		public FixedString64Bytes Name;
 		public int Id;
 		public int ActionId;
+		public MotionPlaybackMode Mode;
 	}
 }

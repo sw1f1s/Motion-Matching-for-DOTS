@@ -10,8 +10,8 @@ using Unity.Mathematics;
 
 namespace ColInt.MMD.Database.Helpers {
 	public static class MotionDatabaseCodec {
-		public const int Version = 6;
-		private const int GroupRecordBytes = 70;
+		public const int Version = 7;
+		private const int GroupRecordBytes = 71;
 		private const uint Magic = 0x31444D4D;
 		private const int MaximumElements = 100000000;
 
@@ -48,6 +48,7 @@ namespace ColInt.MMD.Database.Helpers {
 						writer.Write(clip.Groups.Length);
 						groupOffset += clip.Groups.Length;
 						writer.Write(clip.ActionId);
+						writer.Write((byte)clip.Mode);
 						writer.Write(clip.Loop);
 					}
 					foreach (var clip in source.Clips) {
@@ -84,6 +85,7 @@ namespace ColInt.MMD.Database.Helpers {
 						writer.Write(new byte[61 - name.Length]);
 						writer.Write(group.Id);
 						writer.Write(group.ActionId);
+						writer.Write((byte)group.Mode);
 					}
 					writer.Write(source.LeftFootBone);
 					writer.Write(source.RightFootBone);
@@ -138,7 +140,7 @@ namespace ColInt.MMD.Database.Helpers {
 				long poses = (long)frames * bones;
 				long tracks = (long)clips * bones;
 				long featureSamples = (long)frames * features;
-				long expected = 40L + bones * 8L + clips * 29L + memberships * 4L + frames * 36L + tracks * 13L +
+				long expected = 40L + bones * 8L + clips * 30L + memberships * 4L + frames * 36L + tracks * 13L +
 					positions * 12L + rotations * 8L + scales * 12L + featureSamples * 4L + features * 4L;
 				if (poses > MaximumElements || tracks > MaximumElements || featureSamples > MaximumElements ||
 					positions < tracks || rotations < tracks || scales < tracks || positions > poses || rotations > poses || scales > poses ||
@@ -174,6 +176,7 @@ namespace ColInt.MMD.Database.Helpers {
 						groupOffsets[index] = offset;
 						clip.Groups = new int[count];
 						clip.ActionId = reader.ReadInt32();
+						clip.Mode = (MotionPlaybackMode)reader.ReadByte();
 						clip.Loop = reader.ReadBoolean();
 						clipSources[index] = clip;
 					}
@@ -265,7 +268,7 @@ namespace ColInt.MMD.Database.Helpers {
 			try {
 				return new MotionGroup {
 					Name = new FixedString64Bytes(new UTF8Encoding(false, true).GetString(name, 0, length)),
-					Id = reader.ReadInt32(), ActionId = reader.ReadInt32()
+					Id = reader.ReadInt32(), ActionId = reader.ReadInt32(), Mode = (MotionPlaybackMode)reader.ReadByte()
 				};
 			} catch (DecoderFallbackException exception) {
 				throw new InvalidDataException("Invalid animation group name encoding.", exception);
@@ -303,7 +306,7 @@ namespace ColInt.MMD.Database.Helpers {
 				var groups = MotionDatabaseGroups.GetIds(ref database, clip);
 				source.Clips[index] = new MotionClipSource {
 					FirstFrame = clip.FirstFrame, FrameCount = clip.FrameCount, Duration = clip.Duration, SampleRate = clip.SampleRate,
-					ActionId = clip.ActionId, Loop = clip.Loop, Groups = groups
+					ActionId = clip.ActionId, Mode = clip.Mode, Loop = clip.Loop, Groups = groups
 				};
 			}
 			for (int frame = 0; frame < source.Frames.Length; frame++) {

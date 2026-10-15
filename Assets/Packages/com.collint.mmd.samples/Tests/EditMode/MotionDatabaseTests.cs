@@ -32,7 +32,7 @@ namespace ColInt.MMD.Tests {
 			source.Groups = new[] {
 				new MotionGroup { Name = new Unity.Collections.FixedString64Bytes("Idle"), Id = 1 },
 				new MotionGroup { Name = new Unity.Collections.FixedString64Bytes("Бег"), Id = 2 },
-				new MotionGroup { Name = new Unity.Collections.FixedString64Bytes("Vault"), Id = 4, ActionId = 7 }
+				new MotionGroup { Name = new Unity.Collections.FixedString64Bytes("Vault"), Id = 4, ActionId = 7, Mode = MotionPlaybackMode.Action }
 			};
 			var restored = MotionDatabaseCodec.Read(MotionDatabaseCodec.Write(source));
 			Assert.That(restored.Groups, Is.EqualTo(source.Groups));
@@ -49,6 +49,7 @@ namespace ColInt.MMD.Tests {
 		[TestCase(3)]
 		[TestCase(4)]
 		[TestCase(5)]
+		[TestCase(6)]
 		public void NonCurrentDatabaseVersionsAreRejected(int version) {
 			byte[] bytes = MotionDatabaseCodec.Write(MotionDatabaseFixture.Create());
 			Array.Copy(BitConverter.GetBytes(version), 0, bytes, 4, 4);
@@ -71,13 +72,24 @@ namespace ColInt.MMD.Tests {
 			source.Clips[0].Groups = Array.Empty<int>();
 			source.Clips[2].Groups = Array.Empty<int>();
 			byte[] bytes = MotionDatabaseCodec.Write(source);
-			bytes[bytes.Length - 78] = 62;
+			bytes[bytes.Length - 79] = 62;
 			Assert.Throws<InvalidDataException>(() => MotionDatabaseCodec.Read(bytes));
 			bytes = MotionDatabaseCodec.Write(source);
-			Array.Copy(BitConverter.GetBytes(33), 0, bytes, bytes.Length - 82, 4);
+			Array.Copy(BitConverter.GetBytes(33), 0, bytes, bytes.Length - 83, 4);
 			Assert.Throws<InvalidDataException>(() => MotionDatabaseCodec.Read(bytes));
 			source.Groups = new[] { source.Groups[0], source.Groups[0] };
 			Assert.Throws<ArgumentException>(() => MotionDatabaseBuilder.Build(source));
+		}
+
+		[TestCase(MotionPlaybackMode.MotionMatching, 7)]
+		[TestCase(MotionPlaybackMode.Action, 0)]
+		[TestCase(MotionPlaybackMode.LayerOnly, -1)]
+		[TestCase((MotionPlaybackMode)255, 0)]
+		public void PlaybackModeAndActionIdMustAgree(MotionPlaybackMode mode, int actionId) {
+			var source = MotionDatabaseFixture.Create();
+			source.Clips[0].Mode = mode;
+			source.Clips[0].ActionId = actionId;
+			Assert.Throws<ArgumentException>(() => MotionDatabaseCodec.Write(source));
 		}
 
 		[Test]

@@ -4,7 +4,8 @@
   "references": [
     "ColInt.MMD.Runtime",
     "Unity.Mathematics",
-    "Unity.Collections"
+    "Unity.Collections",
+    "Unity.Entities"
   ],
   "autoReferenced": false,
   "optionalUnityReferences": [

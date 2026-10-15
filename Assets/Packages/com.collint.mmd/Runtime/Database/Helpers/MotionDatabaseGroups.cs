@@ -39,7 +39,7 @@ namespace ColInt.MMD.Database.Helpers {
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static int GetActionId(ref MotionDatabase database, FixedString64Bytes name) {
 			MotionGroup group = GetGroup(ref database, name);
-			if (group.ActionId == 0) {
+			if (group.Mode != MotionPlaybackMode.Action) {
 				throw new ArgumentException("The named group is not an action.");
 			}
 			return group.ActionId;

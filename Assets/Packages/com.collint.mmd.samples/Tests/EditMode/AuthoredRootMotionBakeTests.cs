@@ -64,7 +64,7 @@ namespace ColInt.MMD.Tests {
 			var sample = AssetDatabase.LoadAssetAtPath<MotionBakeConfiguration>(MmdSampleTestAssets.GetPath("Configurations/SampleBakeConfiguration.asset"));
 			var clip = sample.Groups.SelectMany(g => g.Clips).First(c => c.name == clipName);
 			var configuration = ScriptableObject.CreateInstance<MotionBakeConfiguration>();
-			configuration.Configure(sample.Rig, new[] { new MotionBakeGroup { Name = "Catch", Playback = MotionBakeGroupPlayback.Action, Clips = new[] { clip } } },
+			configuration.Configure(sample.Rig, new[] { new MotionBakeGroup { Name = "Catch", Playback = MotionPlaybackMode.Action, Clips = new[] { clip } } },
 				sample.RootMotionPath, sample.LeftFootPath, sample.RightFootPath);
 			var serialized = new SerializedObject(configuration);
 			serialized.FindProperty("_sourceRootMotionPath").stringValue = sample.SourceRootMotionPath;

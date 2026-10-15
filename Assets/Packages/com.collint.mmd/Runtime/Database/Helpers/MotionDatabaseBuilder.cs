@@ -48,8 +48,8 @@ namespace ColInt.MMD.Database.Helpers {
 			var names = new System.Collections.Generic.HashSet<FixedString64Bytes>();
 			var actions = new System.Collections.Generic.HashSet<int>();
 			foreach (MotionGroup group in source.Groups) {
-				if (group.Name.IsEmpty || group.Id <= 0 || !ids.Add(group.Id) || !names.Add(group.Name) || group.ActionId < 0 ||
-					(group.ActionId != 0 && !actions.Add(group.ActionId))) {
+				if (group.Name.IsEmpty || group.Id <= 0 || !ids.Add(group.Id) || !names.Add(group.Name) || !ValidPlayback(group.Mode, group.ActionId) ||
+					(group.ActionId > 0 && !actions.Add(group.ActionId))) {
 					throw new ArgumentException("Invalid or duplicate animation group metadata.");
 				}
 			}
@@ -73,7 +73,7 @@ namespace ColInt.MMD.Database.Helpers {
 				}
 
 				if (clip.FirstFrame != first || clip.FrameCount < 2 || !(clip.Duration > 0f) || !math.isfinite(clip.Duration) ||
-					!(clip.SampleRate > 0f) || !math.isfinite(clip.SampleRate) || (clip.ActionId != 0 && clip.Loop) ||
+					!(clip.SampleRate > 0f) || !math.isfinite(clip.SampleRate) || !ValidPlayback(clip.Mode, clip.ActionId) || (clip.ActionId > 0 && clip.Loop) ||
 					(long)first + clip.FrameCount > source.Frames.Length) {
 					throw new ArgumentException("Clip ranges, timing or action loop mode are invalid.");
 				}
@@ -138,8 +138,8 @@ namespace ColInt.MMD.Database.Helpers {
 			var actions = new System.Collections.Generic.HashSet<int>();
 			for (int index = 0; index < database.Groups.Length; index++) {
 				MotionGroup group = database.Groups[index];
-				if (group.Name.IsEmpty || group.Id <= 0 || !ids.Add(group.Id) || !names.Add(group.Name) || group.ActionId < 0 ||
-					(group.ActionId != 0 && !actions.Add(group.ActionId))) {
+				if (group.Name.IsEmpty || group.Id <= 0 || !ids.Add(group.Id) || !names.Add(group.Name) || !ValidPlayback(group.Mode, group.ActionId) ||
+					(group.ActionId > 0 && !actions.Add(group.ActionId))) {
 					throw new ArgumentException("Invalid or duplicate animation group metadata.");
 				}
 			}
@@ -161,7 +161,7 @@ namespace ColInt.MMD.Database.Helpers {
 				}
 
 				if (clip.FirstFrame != first || clip.FrameCount < 2 || !(clip.Duration > 0f) || !math.isfinite(clip.Duration) ||
-					!(clip.SampleRate > 0f) || !math.isfinite(clip.SampleRate) || (clip.ActionId != 0 && clip.Loop) ||
+					!(clip.SampleRate > 0f) || !math.isfinite(clip.SampleRate) || !ValidPlayback(clip.Mode, clip.ActionId) || (clip.ActionId > 0 && clip.Loop) ||
 					(long)first + clip.FrameCount > database.Frames.Length) {
 					throw new ArgumentException("Clip ranges, timing or action loop mode are invalid.");
 				}
@@ -273,6 +273,11 @@ namespace ColInt.MMD.Database.Helpers {
 			}
 		}
 
+		private static bool ValidPlayback(MotionPlaybackMode mode, int actionId) {
+			return mode == MotionPlaybackMode.Action ? actionId > 0 :
+				(mode == MotionPlaybackMode.MotionMatching || mode == MotionPlaybackMode.LayerOnly) && actionId == 0;
+		}
+
 		private static void ValidatePoseTracks(ref MotionDatabase database) {
 			long positions = 0;
 			long rotations = 0;
@@ -319,7 +324,7 @@ namespace ColInt.MMD.Database.Helpers {
 				int wordCount = clip.Groups.Length == 0 ? 0 : BitMask.WordsForBits(clip.Groups[clip.Groups.Length - 1]);
 				clips[index] = new MotionClip {
 					FirstFrame = clip.FirstFrame, FrameCount = clip.FrameCount, Duration = clip.Duration, SampleRate = clip.SampleRate,
-					ActionId = clip.ActionId, Loop = clip.Loop, FirstGroupWord = offset, GroupWordCount = wordCount
+					ActionId = clip.ActionId, Mode = clip.Mode, Loop = clip.Loop, FirstGroupWord = offset, GroupWordCount = wordCount
 				};
 				for (int word = 0; word < wordCount; word++) {
 					words[offset + word] = 0;

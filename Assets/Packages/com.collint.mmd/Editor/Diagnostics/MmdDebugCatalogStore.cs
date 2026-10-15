@@ -94,6 +94,7 @@ namespace ColInt.MMD.Editor.Diagnostics {
 						writer.Write(group.Name.ToString());
 						writer.Write(group.Id);
 						writer.Write(group.ActionId);
+						writer.Write((byte)group.Mode);
 					}
 					writer.Write(database.Clips.Length);
 					for (int index = 0; index < database.Clips.Length; index++) {
@@ -108,6 +109,7 @@ namespace ColInt.MMD.Editor.Diagnostics {
 							writer.Write(group);
 						}
 						writer.Write(clip.ActionId);
+						writer.Write((byte)clip.Mode);
 						writer.Write(clip.Loop);
 						WriteSample(writer, ref database, clip.FirstFrame);
 						WriteSample(writer, ref database, clip.FirstFrame + clip.FrameCount / 2);

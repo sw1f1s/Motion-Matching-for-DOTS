@@ -769,6 +769,10 @@ MonoBehaviour:
     - {fileID: 8993902097722301239, guid: ead238f5481784081b1c703ea8aee9d9, type: 3}
     - {fileID: 8993902097722301239, guid: 2ba7f352d45964c729a7b68a4407abf9, type: 3}
     - {fileID: 8993902097722301239, guid: ce4c8f20cfe9145aa8168fb2922827d2, type: 3}
+  - <Name>k__BackingField: Hammer Run
+    <Playback>k__BackingField: 2
+    <Clips>k__BackingField:
+    - {fileID: 3245352106960005014, guid: 04dd8a1164a904181b10a2d323765a81, type: 3}
   _sampleRate: 60
   _maximumRotationErrorDegrees: 0.05
   _normalizationGroups:

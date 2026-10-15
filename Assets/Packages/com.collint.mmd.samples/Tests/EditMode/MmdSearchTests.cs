@@ -1,3 +1,4 @@
+using ColInt.MMD.Database.Data;
 using ColInt.MMD.MotionMatching.Data;
 using ColInt.MMD.Actions.Components;
 using ColInt.MMD.Database.Components;
@@ -56,6 +57,7 @@ namespace ColInt.MMD.Tests {
 				excludedGroup = 1;
 			} else if (rejection == "Action") {
 				continuation.ActionId = 3;
+				continuation.Mode = MotionPlaybackMode.Action;
 				continuation.Loop = false;
 			} else if (rejection == "Endpoint") {
 				frameIndex = 10;
@@ -275,6 +277,7 @@ namespace ColInt.MMD.Tests {
 				var value = source.Clips[clip];
 				value.Loop = clip == 2;
 				value.ActionId = 0;
+				value.Mode = MotionPlaybackMode.MotionMatching;
 				value.Groups = clip == 2 ? new[] { 1, 4 } : new[] { 1 };
 				source.Clips[clip] = value;
 			}
@@ -322,6 +325,7 @@ namespace ColInt.MMD.Tests {
 			var idle = source.Clips[2];
 			idle.Loop = true;
 			idle.ActionId = 0;
+			idle.Mode = MotionPlaybackMode.MotionMatching;
 			idle.Groups = new[] { 1, 4 };
 			source.Clips[2] = idle;
 			for (int frame = 0; frame < source.Frames.Length; frame++) {
@@ -368,6 +372,7 @@ namespace ColInt.MMD.Tests {
 				var value = source.Clips[clip];
 				value.Loop = clip == 0;
 				value.ActionId = clip == 2 ? 7 : 0;
+				value.Mode = clip == 2 ? MotionPlaybackMode.Action : MotionPlaybackMode.MotionMatching;
 				value.Groups = new[] { 1 };
 				source.Clips[clip] = value;
 			}

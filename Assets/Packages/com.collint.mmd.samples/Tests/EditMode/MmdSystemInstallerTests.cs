@@ -23,9 +23,13 @@ namespace ColInt.MMD.Tests {
 				Assert.That(parent.RateManager, Is.SameAs(rateManager));
 				Assert.That(parent.ManagedSystems.Count, Is.EqualTo(1));
 				Assert.That(parent.ManagedSystems[0], Is.SameAs(simulation));
-				Assert.That(simulation.ManagedSystems.Count, Is.EqualTo(5));
+				Assert.That(simulation.ManagedSystems.Count, Is.EqualTo(6));
 				Assert.That(simulation.ManagedSystems[2], Is.TypeOf<MmdPlaybackGroup>());
 				Assert.That(simulation.ManagedSystems[3], Is.TypeOf<MmdInertializationGroup>());
+				Assert.That(simulation.ManagedSystems[5], Is.TypeOf<MmdAnimationLayerGroup>());
+				var layers = host.GetExistingSystemManaged<MmdAnimationLayerGroup>();
+				Assert.That(layers.ManagedSystems[0], Is.TypeOf<MmdAnimationLayerControlGroup>());
+				Assert.That(layers.ManagedSystems[1], Is.TypeOf<MmdAnimationLayerSearchGroup>());
 				Assert.That(host.GetExistingSystemManaged<SimulationSystemGroup>(), Is.Null);
 				Assert.That(host.GetExistingSystemManaged<PresentationSystemGroup>(), Is.Null);
 				using (var stateQuery = host.EntityManager.CreateEntityQuery(typeof(MmdWorldState))) {

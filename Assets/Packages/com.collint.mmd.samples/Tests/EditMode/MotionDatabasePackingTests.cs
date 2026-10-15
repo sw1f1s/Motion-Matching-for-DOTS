@@ -52,7 +52,7 @@ namespace ColInt.MMD.Tests {
 		[Test]
 		public void MalformedCompactCountsTracksAndChannelValuesAreRejected() {
 			byte[] valid = MotionDatabaseCodec.Write(MotionDatabaseFixture.Create());
-			int trackOffset = 40 + 2 * 8 + 3 * 29 + 3 * 4 + 33 * 36;
+			int trackOffset = 40 + 2 * 8 + 3 * 30 + 3 * 4 + 33 * 36;
 			byte[] damaged = (byte[])valid.Clone();
 			Array.Copy(BitConverter.GetBytes(int.MaxValue), 0, damaged, 24, 4);
 			Assert.Throws<InvalidDataException>(() => MotionDatabaseCodec.Load(damaged));
@@ -66,7 +66,7 @@ namespace ColInt.MMD.Tests {
 			Array.Copy(BitConverter.GetBytes(float.NaN), 0, damaged, trackOffset + 6 * 13, 4);
 			Assert.Throws<InvalidDataException>(() => MotionDatabaseCodec.Load(damaged));
 			damaged = (byte[])valid.Clone();
-			Array.Copy(BitConverter.GetBytes(float.NaN), 0, damaged, 40 + 2 * 8 + 3 * 29 + 3 * 4 + 4, 4);
+			Array.Copy(BitConverter.GetBytes(float.NaN), 0, damaged, 40 + 2 * 8 + 3 * 30 + 3 * 4 + 4, 4);
 			Assert.Throws<InvalidDataException>(() => MotionDatabaseCodec.Load(damaged));
 			damaged = (byte[])valid.Clone();
 			Array.Resize(ref damaged, 32);

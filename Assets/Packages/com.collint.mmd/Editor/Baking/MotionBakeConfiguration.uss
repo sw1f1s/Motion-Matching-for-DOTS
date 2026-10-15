@@ -1,12 +1,60 @@
+.mmd-bake-field {
+    min-width: 0;
+    margin: 2px 0;
+    align-items: center;
+}
+
+.mmd-bake-inspector .mmd-bake-field > .unity-base-field__label {
+    width: 132px;
+    min-width: 132px;
+    flex-shrink: 0;
+    margin-right: 6px;
+    -unity-text-align: middle-left;
+}
+
+.mmd-bake-field > .unity-base-field__input {
+    min-width: 0;
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.mmd-bake-field .unity-base-popup-field__text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mmd-bake-field .unity-slider__input-field {
+    width: 48px;
+    min-width: 48px;
+}
+
+.mmd-bake-inspector .unity-foldout__toggle {
+    margin-left: 0;
+}
+
+.mmd-animation-group > .unity-foldout__content,
+.mmd-bake-settings > .unity-foldout__content {
+    margin-left: 15px;
+}
+
+.mmd-bake-groups {
+    margin-top: 6px;
+}
+
 .mmd-animation-group {
     margin-top: 4px;
     margin-bottom: 4px;
 }
 
 .mmd-group-clips {
-    height: 240px;
+    height: 216px;
     margin-top: 4px;
     margin-bottom: 6px;
+}
+
+.mmd-add-group-button,
+.mmd-bake-settings {
+    margin-top: 6px;
 }
 
 .mmd-bake-button {

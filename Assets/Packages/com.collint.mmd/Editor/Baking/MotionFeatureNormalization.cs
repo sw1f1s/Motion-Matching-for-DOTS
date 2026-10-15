@@ -51,6 +51,9 @@ namespace ColInt.MMD.Editor.Baking {
 			}
 		}
 		private static bool Eligible(in MotionClipSource clip, int[] groups) {
+			if (clip.Mode == MotionPlaybackMode.LayerOnly) {
+				return false;
+			}
 			if (groups.Length == 0) {
 				return true;
 			}

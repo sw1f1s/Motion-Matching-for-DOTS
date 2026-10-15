@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Fingerprint": "62af9ca3dd0d7714cc6d553f58f1ccc6ac93248899ea68717e3240228b5df871",
+  "Fingerprint": "269e4b38429a7c49e6d2f62b29286d274d993aab4ed852426d6cc615999aa8b2",
   "DatabasePath": "Assets/Packages/com.collint.mmd.samples/Databases/Locomotion.bytes",
   "Names": [
     "M_Neutral_Stand_Idle_Loop",
@@ -554,7 +554,8 @@
     "M_Neutral_Slide_FootOut_Loop",
     "M_Neutral_Slide_FootOut_Out_Idle_Crouch",
     "M_Neutral_Slide_KneesOut_Loop",
-    "M_Neutral_Slide_KneesOut_Out_Idle_Crouch"
+    "M_Neutral_Slide_KneesOut_Out_Idle_Crouch",
+    "Run_Combat_Loop_F_0"
   ],
   "AssetPaths": [
     "Assets/Packages/com.collint.mmd.samples/Animations/Idle/M_Neutral_Stand_Idle_Loop.fbx",
@@ -1108,6 +1109,7 @@
     "Assets/Packages/com.collint.mmd.samples/Animations/Slide/M_Neutral_Slide_FootOut_Loop.fbx",
     "Assets/Packages/com.collint.mmd.samples/Animations/Slide/M_Neutral_Slide_FootOut_Out_Idle_Crouch.fbx",
     "Assets/Packages/com.collint.mmd.samples/Animations/Slide/M_Neutral_Slide_KneesOut_Loop.fbx",
-    "Assets/Packages/com.collint.mmd.samples/Animations/Slide/M_Neutral_Slide_KneesOut_Out_Idle_Crouch.fbx"
+    "Assets/Packages/com.collint.mmd.samples/Animations/Slide/M_Neutral_Slide_KneesOut_Out_Idle_Crouch.fbx",
+    "Assets/Packages/com.collint.mmd.samples/Animations/Hummer/Run_Combat_Loop_F_0.fbx"
   ]
 }

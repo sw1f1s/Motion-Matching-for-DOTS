@@ -1,3 +1,4 @@
+using ColInt.MMD.Playback.Authoring;
 using UnityEngine;
 
 namespace ColInt.MMD.Samples.Character.Configurations {
@@ -12,6 +13,7 @@ namespace ColInt.MMD.Samples.Character.Configurations {
 		[SerializeField] private MmdSampleCrouchConfiguration _crouch = new MmdSampleCrouchConfiguration();
 		[SerializeField] private MmdSampleSlideConfiguration _slide = new MmdSampleSlideConfiguration();
 		[SerializeField] private MmdSampleTraversalConfiguration _traversal = new MmdSampleTraversalConfiguration();
+		[SerializeField] private MmdAnimationLayersConfiguration _animationLayers;
 
 		public MmdSampleCharacterAssets Assets => _assets;
 		public MmdSampleLocomotionConfiguration Locomotion => _locomotion;
@@ -22,5 +24,6 @@ namespace ColInt.MMD.Samples.Character.Configurations {
 		public MmdSampleCrouchConfiguration Crouch => _crouch;
 		public MmdSampleSlideConfiguration Slide => _slide;
 		public MmdSampleTraversalConfiguration Traversal => _traversal;
+		public MmdAnimationLayersConfiguration AnimationLayers => _animationLayers;
 	}
 }

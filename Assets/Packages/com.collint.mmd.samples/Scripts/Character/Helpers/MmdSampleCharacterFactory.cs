@@ -12,6 +12,8 @@ using ColInt.MMD.MotionMatching.Components;
 using ColInt.MMD.MotionMatching.Helpers;
 using ColInt.MMD.Physics.Components;
 using ColInt.MMD.Playback.Components;
+using ColInt.MMD.Playback.Data;
+using ColInt.MMD.Playback.Authoring;
 using ColInt.MMD.Playback.Helpers;
 using ColInt.MMD.Presentation.Components;
 using ColInt.MMD.RootMotion.Components;
@@ -32,6 +34,7 @@ namespace ColInt.MMD.Samples.Character.Helpers {
 		private readonly World _world;
 		private readonly Dictionary<TextAsset, BlobAssetReference<MotionDatabase>> _assetDatabases = new Dictionary<TextAsset, BlobAssetReference<MotionDatabase>>();
 		private readonly List<BlobAssetReference<MotionDatabase>> _ownedDatabases = new List<BlobAssetReference<MotionDatabase>>();
+		private readonly Dictionary<MmdAnimationLayersConfiguration, MmdAnimationLayerSet> _layerDefinitions = new Dictionary<MmdAnimationLayersConfiguration, MmdAnimationLayerSet>();
 		private bool _disposed;
 
 		internal MmdSampleCharacterFactory(World world) {
@@ -47,6 +50,16 @@ namespace ColInt.MMD.Samples.Character.Helpers {
 			Entity entity = Create(database, false, spawnTransform);
 			var manager = _world.EntityManager;
 			try {
+				if (configuration.AnimationLayers != null) {
+					if (!database.IsCreated || configuration.AnimationLayers.Database != configuration.Assets.Database) {
+						throw new ArgumentException("Animation layers must reference the character's baked database.");
+					}
+					if (!_layerDefinitions.TryGetValue(configuration.AnimationLayers, out var definition)) {
+						definition = MmdAnimationLayerBuilder.Build(database, configuration.AnimationLayers.Layers);
+						_layerDefinitions.Add(configuration.AnimationLayers, definition);
+					}
+					MmdAnimationLayers.Add(manager, entity, definition);
+				}
 				MmdSampleCharacterPhysicsBuilder.Add(manager, entity, string.IsNullOrEmpty(configuration.Crouch.IdleGroup) ? 0f : configuration.Crouch.Height);
 				if (database.IsCreated) {
 					manager.AddComponentData(entity, new MmdInertialization {
@@ -161,6 +174,11 @@ namespace ColInt.MMD.Samples.Character.Helpers {
 				return;
 			}
 			_disposed = true;
+			foreach (var definition in _layerDefinitions.Values) {
+				var owned = definition;
+				owned.Dispose();
+			}
+			_layerDefinitions.Clear();
 			foreach (var database in _ownedDatabases) {
 				var owned = database;
 				owned.Dispose();
@@ -193,7 +211,7 @@ namespace ColInt.MMD.Samples.Character.Helpers {
 				return 0;
 			}
 			MotionGroup group = MotionDatabaseGroups.GetGroup(ref database.Value, new Unity.Collections.FixedString64Bytes(name));
-			if (group.ActionId != 0) {
+			if (group.Mode != MotionPlaybackMode.MotionMatching) {
 				throw new ArgumentException("Sample locomotion requires a Motion Matching group.");
 			}
 			return group.Id;

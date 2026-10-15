@@ -27,6 +27,10 @@ https://github.com/sw1f1s/Motion-Matching-for-DOTS.git?path=Assets/Packages/com.
 
 Управление: WASD — движение, X — ходьба/бег, Shift — спринт, Ctrl — присед или слайд во время спринта, Space — прыжок или Traversal. Подробности архитектуры и отладки — в [README ядра](../com.collint.mmd/README.md).
 
+## Слои анимации
+
+В `Configurations/AnimationMasks` находятся маски RightArm, LeftArm и UpperBody для SampleCharacter. `Configurations/SampleAnimationLayers.asset` включает слой Hammer Right Arm: правая рука и пальцы используют зацикленный Run_Combat_Loop_F_0 из группы Hammer Run (Layer Only). Клип выбирается через Motion Matching по движению персонажа. Слой ограничен явным списком 33 существующих базовых групп; новые группы, например удары, не включают его автоматически. Список меняется через поле флагов Base Groups (Everything / Nothing / отдельные группы). Левая рука, корпус, ноги и root motion остаются от базовой анимации. Назначьте его в **Sample Character Configuration → Animation Layers** или создайте собственный asset через **Create → MMD → Animation Layers**. Для оружия добавьте свой клип в bake-группу с **Playback → Layer Only**, запеките базу и выберите эту группу в слое. Подробности настройки весов и runtime API — в [README ядра](../com.collint.mmd/README.md#слои-и-маски-анимации).
+
 ## Тесты
 
 Установите Unity Test Framework 1.6.0 и добавьте в `Packages/manifest.json` верхнеуровневое поле:

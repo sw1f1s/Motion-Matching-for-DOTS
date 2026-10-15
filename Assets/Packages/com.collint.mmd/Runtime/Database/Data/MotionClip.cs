@@ -7,6 +7,7 @@ namespace ColInt.MMD.Database.Data {
 		public int FirstGroupWord;
 		public int GroupWordCount;
 		public int ActionId;
+		public MotionPlaybackMode Mode;
 		public bool Loop;
 	}
 

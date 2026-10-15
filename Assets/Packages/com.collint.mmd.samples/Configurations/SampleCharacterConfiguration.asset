@@ -109,3 +109,4 @@ MonoBehaviour:
       <CatchCliff>k__BackingField: TraversalCatchCliff
       <CatchVault>k__BackingField: TraversalCatchVault
       <CatchHurdle>k__BackingField: TraversalCatchHurdle
+  _animationLayers: {fileID: 0}

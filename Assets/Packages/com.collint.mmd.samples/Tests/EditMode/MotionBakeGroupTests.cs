@@ -1,3 +1,4 @@
+using ColInt.MMD.Database.Data;
 using System.Linq;
 using System;
 using ColInt.MMD.Database.Helpers;
@@ -9,6 +10,27 @@ using UnityEngine;
 
 namespace ColInt.MMD.Tests {
 	public class MotionBakeGroupTests {
+		[Test]
+		public void LayerOnlyGroupsAllowSharedLoopingClipsWithoutBecomingActionsOrMatchingClips() {
+			AnimationClip clip = CreateClip();
+			try {
+				var settings = AnimationUtility.GetAnimationClipSettings(clip);
+				settings.loopTime = true;
+				AnimationUtility.SetAnimationClipSettings(clip, settings);
+				var layer = new MotionBakeGroup { Name = "Weapon", Playback = MotionPlaybackMode.LayerOnly, Clips = new[] { clip } };
+				var result = MotionBakeGroupResolver.Resolve(new[] {
+					layer, new MotionBakeGroup { Name = "Other Weapon", Playback = MotionPlaybackMode.LayerOnly, Clips = new[] { clip } }
+				});
+				Assert.That(result.Clips.Length, Is.EqualTo(1));
+				Assert.That(result.Clips[0].Loop, Is.True);
+				Assert.That(result.Clips[0].Mode, Is.EqualTo(MotionPlaybackMode.LayerOnly));
+				Assert.That(result.Clips[0].Groups, Is.EqualTo(new[] { 1, 2 }));
+				Assert.Throws<ArgumentException>(() => MotionBakeGroupResolver.Resolve(new[] { layer, new MotionBakeGroup { Name = "Run", Clips = new[] { clip } } }));
+			} finally {
+				UnityEngine.Object.DestroyImmediate(clip);
+			}
+		}
+
 		[Test]
 		public void SharedClipIsBakedOnceWithBothNamedGroupsAndUsesClipLoopSetting() {
 			AnimationClip clip = CreateClip();
@@ -70,7 +92,7 @@ namespace ColInt.MMD.Tests {
 		public void ActionsReceiveAutomaticIdsAndRejectLoopsOrSharedPlaybackModes() {
 			AnimationClip clip = CreateClip();
 			try {
-				var action = new MotionBakeGroup { Name = "Vault", Playback = MotionBakeGroupPlayback.Action, Clips = new[] { clip } };
+				var action = new MotionBakeGroup { Name = "Vault", Playback = MotionPlaybackMode.Action, Clips = new[] { clip } };
 				var result = MotionBakeGroupResolver.Resolve(new[] { action });
 				Assert.That(result.Clips[0].ActionId, Is.EqualTo(result.Groups[0].ActionId).And.Not.Zero);
 				Assert.Throws<ArgumentException>(() => MotionBakeGroupResolver.Resolve(new[] { action, new MotionBakeGroup { Name = "Run", Clips = new[] { clip } } }));
@@ -123,12 +145,15 @@ namespace ColInt.MMD.Tests {
 		public void SampleContainsRefaceStartsAndPreservesGaitMasks() {
 			var configuration = AssetDatabase.LoadAssetAtPath<MotionBakeConfiguration>(MmdSampleTestAssets.GetPath("Configurations/SampleBakeConfiguration.asset"));
 			var selection = MotionBakeGroupResolver.Resolve(configuration.Groups);
-			Assert.That(selection.Clips.Length, Is.EqualTo(552));
+			Assert.That(selection.Clips.Length, Is.EqualTo(553));
 			Assert.That(configuration.Groups.Take(5).Select(g => g.Name), Is.EqualTo(new[] { "Idle", "Walk", "Run", "Turn", "Start" }));
 			Assert.That(configuration.Groups.Take(5).Select(g => g.Clips.Length), Is.EqualTo(new[] { 41, 88, 88, 8, 68 }));
-			Assert.That(selection.Clips.Count(c => c.Loop), Is.EqualTo(52));
+			Assert.That(selection.Clips.Count(c => c.Loop), Is.EqualTo(53));
 			Assert.That(selection.Clips.Any(c => c.Clip.name.StartsWith("M_Relaxed_")), Is.False);
-			Assert.That(selection.Clips.Count(c => c.ActionId != 0), Is.EqualTo(68));
+			Assert.That(selection.Clips.Count(c => c.ActionId > 0), Is.EqualTo(68));
+			var hammer = selection.Clips.Single(c => c.Clip.name == "Run_Combat_Loop_F_0");
+			Assert.That(hammer.Mode, Is.EqualTo(MotionPlaybackMode.LayerOnly));
+			Assert.That(hammer.Loop, Is.True);
 			Assert.That(selection.Clips.Single(c => c.Clip.name == "M_Neutral_Jump_Loop_Fall").Loop, Is.True);
 			Assert.That(selection.Clips.Count(c => c.Clip.name.Contains("Reface_Start")), Is.EqualTo(30));
 			Assert.That(selection.Clips.Single(c => c.Clip.name == "M_Neutral_Walk_Reface_Start_F_R_180").Groups, Is.EqualTo(new[] { 2, 5 }));

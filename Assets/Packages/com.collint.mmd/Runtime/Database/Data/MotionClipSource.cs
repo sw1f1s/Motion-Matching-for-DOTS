@@ -7,6 +7,7 @@ namespace ColInt.MMD.Database.Data {
 		public float SampleRate;
 		public int[] Groups;
 		public int ActionId;
+		public MotionPlaybackMode Mode;
 		public bool Loop;
 	}
 }

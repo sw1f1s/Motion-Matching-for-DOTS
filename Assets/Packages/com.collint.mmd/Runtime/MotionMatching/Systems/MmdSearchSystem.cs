@@ -1,3 +1,4 @@
+using ColInt.MMD.Database.Data;
 using ColInt.MMD.Actions.Components;
 using ColInt.MMD.Database.Components;
 using ColInt.MMD.Lifecycle.Components;
@@ -54,7 +55,7 @@ namespace ColInt.MMD.MotionMatching.Systems {
 				}
 				int continuation = MmdAnimationMath.FrameAt(ref database, playback.ClipIndex, playback.Time);
 				ref var currentClip = ref database.Clips[playback.ClipIndex];
-				if (playback.MatchedFrame >= 0 && playback.TransitionElapsed < settings.MinimumTransitionTime && currentClip.ActionId == 0 &&
+				if (playback.MatchedFrame >= 0 && playback.TransitionElapsed < settings.MinimumTransitionTime && currentClip.Mode == MotionPlaybackMode.MotionMatching &&
 					MmdMotionGroups.Matches(ref database, currentClip, groups) &&
 					(currentClip.Loop || currentClip.Duration - playback.Time >= settings.MinimumRemainingTime)) {
 					fault.Code = MmdFaultCode.None;

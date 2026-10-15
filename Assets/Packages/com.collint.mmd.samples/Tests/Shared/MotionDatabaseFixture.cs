@@ -11,7 +11,7 @@ namespace ColInt.MMD.Tests {
 				Groups = new[] {
 					new MotionGroup { Name = new Unity.Collections.FixedString64Bytes("Idle"), Id = 1 },
 					new MotionGroup { Name = new Unity.Collections.FixedString64Bytes("Walk"), Id = 2 },
-					new MotionGroup { Name = new Unity.Collections.FixedString64Bytes("Action"), Id = 4, ActionId = 7 },
+					new MotionGroup { Name = new Unity.Collections.FixedString64Bytes("Action"), Id = 4, ActionId = 7, Mode = MotionPlaybackMode.Action },
 					new MotionGroup { Name = new Unity.Collections.FixedString64Bytes("Other"), Id = 8 }
 				},
 				Parents = new[] { -1, 0 }, BoneNameHashes = new[] { 1, 2 },
@@ -25,7 +25,7 @@ namespace ColInt.MMD.Tests {
 			for (int clip = 0; clip < 3; clip++) {
 				source.Clips[clip] = new MotionClipSource {
 					FirstFrame = clip * samples, FrameCount = samples, SampleRate = 10f, Duration = 1f,
-					Loop = clip != 2, ActionId = clip == 2 ? 7 : 0, Groups = new[] { 1 << clip }
+					Loop = clip != 2, ActionId = clip == 2 ? 7 : 0, Mode = clip == 2 ? MotionPlaybackMode.Action : MotionPlaybackMode.MotionMatching, Groups = new[] { 1 << clip }
 				};
 				for (int sample = 0; sample < samples; sample++) {
 					int frame = clip * samples + sample;

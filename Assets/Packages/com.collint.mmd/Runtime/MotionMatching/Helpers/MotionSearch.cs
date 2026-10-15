@@ -12,11 +12,11 @@ namespace ColInt.MMD.MotionMatching.Helpers {
 		private const float StationaryFacingDifference = 0.025f;
 
 		public static int Find(ref MotionDatabase database, in DynamicBuffer<MmdSearchQueryElement> query,
-			in MmdSearchSettings settings, in DynamicBuffer<MmdMotionGroup> groups, int continuationFrame, float playbackSpeed = 1f, float continuationTime = float.NaN) {
+			in MmdSearchSettings settings, in DynamicBuffer<MmdMotionGroup> groups, int continuationFrame, float playbackSpeed = 1f, float continuationTime = float.NaN, int layerGroup = 0) {
 			if (query.Length != database.FeatureCount) {
 				return -1;
 			}
-			float speed = math.clamp(playbackSpeed, 0f, 1f);
+			float speed = math.max(playbackSpeed, 0f);
 			float continuationAmount = 0f;
 			if (math.isfinite(continuationTime) && continuationFrame >= 0 && continuationFrame + 1 < database.Frames.Length &&
 				database.Frames[continuationFrame].ClipIndex == database.Frames[continuationFrame + 1].ClipIndex) {
@@ -24,14 +24,14 @@ namespace ColInt.MMD.MotionMatching.Helpers {
 				float time = MmdAnimationMath.LocalTime(database.Clips[sample.ClipIndex], continuationTime);
 				continuationAmount = math.saturate((time - sample.Time) / (database.Frames[continuationFrame + 1].Time - sample.Time));
 			}
-			bool stationary = IsStationary(query) && HasEligibleLoop(ref database, groups);
-			bool leavingAction = continuationFrame >= 0 && continuationFrame < database.Frames.Length &&
-				database.Clips[database.Frames[continuationFrame].ClipIndex].ActionId != 0;
+			bool stationary = IsStationary(query) && HasEligibleLoop(ref database, groups, true, layerGroup);
+			bool leavingAction = layerGroup == 0 && continuationFrame >= 0 && continuationFrame < database.Frames.Length &&
+				database.Clips[database.Frames[continuationFrame].ClipIndex].Mode == MotionPlaybackMode.Action;
 			bool settledLoop = continuationFrame >= 0 && continuationFrame < database.Frames.Length &&
 				database.Clips[database.Frames[continuationFrame].ClipIndex].Loop && IsStationary(ref database, continuationFrame, speed);
 			// A settled loop must not re-enter a moving stop just to match the outgoing foot pose.
 			bool requireLoop = stationary && (leavingAction || settledLoop || CanFinishOneShot(ref database, continuationFrame, speed)) ||
-				settings.PreferLoop && HasEligibleLoop(ref database, groups, false);
+				settings.PreferLoop && HasEligibleLoop(ref database, groups, false, layerGroup);
 			float2 requestedDirection = float2.zero;
 			bool scoreDirection = settings.TrajectoryDirectionWeight > 0f && database.FeatureCount == LocomotionSchema.Dimension;
 			if (scoreDirection) {
@@ -47,7 +47,7 @@ namespace ColInt.MMD.MotionMatching.Helpers {
 			if (continuationFrame >= 0 && continuationFrame < database.Frames.Length) {
 				ref var continuation = ref database.Frames[continuationFrame];
 				ref var clip = ref database.Clips[continuation.ClipIndex];
-				if (clip.ActionId == 0 && MmdMotionGroups.Matches(ref database, clip, groups) && (!requireLoop || clip.Loop) &&
+				if (Eligible(ref database, clip, groups, layerGroup) && (!requireLoop || clip.Loop) &&
 					(clip.Loop || !(clip.Duration - continuation.Time < settings.MinimumRemainingTime)) &&
 					continuationFrame != clip.FirstFrame + clip.FrameCount - 1) {
 					float cost = Cost(ref database, query, settings, continuationFrame, speed, continuationAmount, 0f,
@@ -60,7 +60,7 @@ namespace ColInt.MMD.MotionMatching.Helpers {
 			}
 			for (int clipIndex = 0; clipIndex < database.Clips.Length; clipIndex++) {
 				ref MotionClip clip = ref database.Clips[clipIndex];
-				if (clip.ActionId != 0 || !MmdMotionGroups.Matches(ref database, clip, groups) || requireLoop && !clip.Loop) {
+				if (!Eligible(ref database, clip, groups, layerGroup) || requireLoop && !clip.Loop) {
 					continue;
 				}
 				int end = clip.FirstFrame + clip.FrameCount - 1;
@@ -96,6 +96,12 @@ namespace ColInt.MMD.MotionMatching.Helpers {
 				}
 			}
 			return best;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private static bool Eligible(ref MotionDatabase database, in MotionClip clip, in DynamicBuffer<MmdMotionGroup> groups, int layerGroup) {
+			return layerGroup > 0 ? ColInt.MMD.Database.Helpers.MotionDatabaseGroups.Contains(ref database, clip, layerGroup)
+				: clip.Mode == MotionPlaybackMode.MotionMatching && MmdMotionGroups.Matches(ref database, clip, groups);
 		}
 
 		private static float Cost(ref MotionDatabase database, in DynamicBuffer<MmdSearchQueryElement> query,
@@ -135,10 +141,10 @@ namespace ColInt.MMD.MotionMatching.Helpers {
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private static bool HasEligibleLoop(ref MotionDatabase database, in DynamicBuffer<MmdMotionGroup> groups, bool stationaryOnly = true) {
+		private static bool HasEligibleLoop(ref MotionDatabase database, in DynamicBuffer<MmdMotionGroup> groups, bool stationaryOnly = true, int layerGroup = 0) {
 			for (int index = 0; index < database.Clips.Length; index++) {
 				ref MotionClip clip = ref database.Clips[index];
-				if (clip.Loop && clip.ActionId == 0 && MmdMotionGroups.Matches(ref database, clip, groups) && (!stationaryOnly || IsStationary(ref database, clip.FirstFrame, 1f))) {
+				if (clip.Loop && Eligible(ref database, clip, groups, layerGroup) && (!stationaryOnly || IsStationary(ref database, clip.FirstFrame, 1f))) {
 					return true;
 				}
 			}

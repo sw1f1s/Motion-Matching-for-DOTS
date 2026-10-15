@@ -1,3 +1,4 @@
+using ColInt.MMD.Database.Data;
 using UnityEngine;
 
 namespace ColInt.MMD.Editor.Baking {
@@ -7,5 +8,6 @@ namespace ColInt.MMD.Editor.Baking {
 		public bool Loop { get; set; }
 		public int[] Groups { get; set; } = System.Array.Empty<int>();
 		public int ActionId { get; set; }
+		public MotionPlaybackMode Mode { get; set; }
 	}
 }

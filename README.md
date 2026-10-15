@@ -2,15 +2,17 @@
 
 MMD (`com.collint.mmd`, namespace `ColInt.MMD`) — пакет скелетной анимации для Unity Entities. Он подбирает анимацию по траектории и позе персонажа, сглаживает переходы, применяет root motion в ECS и поддерживает GPU-деформацию через Entities Graphics.
 
+Текущая версия — **0.3.0**. Изменения и требования к обновлению описаны в [Changelog](Assets/Packages/com.collint.mmd/CHANGELOG.md).
+
 ## Установка
 
 Требуются Unity 6000.3+ и URP. Начиная с версии 0.2.0 ядро и примеры поставляются двумя UPM-пакетами:
 
 | Что установить | Пакет / архив |
 | --- | --- |
-| Только MMD | `com.collint.mmd` / `com.collint.mmd-0.2.0.tgz` |
-| Добавить примеры к установленному MMD | `com.collint.mmd.samples` / `com.collint.mmd.samples-0.2.0.tgz` |
-| MMD и примеры одним скачиванием | `mmd-with-samples-0.2.0.zip`, содержащий оба `.tgz` |
+| Только MMD | `com.collint.mmd` / `com.collint.mmd-0.3.0.tgz` |
+| Добавить примеры к установленному MMD | `com.collint.mmd.samples` / `com.collint.mmd.samples-0.3.0.tgz` |
+| MMD и примеры одним скачиванием | `mmd-with-samples-0.3.0.zip`, содержащий оба `.tgz` |
 
 Архивы создаются локально командой `python3 Tools/package_release.py` в `artifacts/packages`. Для одного пакета используйте `--package core` или `--package samples`. Папка `artifacts` исключена из Git; скрипт ничего не публикует. Samples требует ядро соответствующей версии и не работает самостоятельно.
 

@@ -2,11 +2,13 @@
 
 MMD — плагин анимации для Unity Entities: Motion Matching, воспроизведение скелетной анимации, root motion и GPU-деформация через Entities Graphics. Идентификатор: `com.collint.mmd`, namespace: `ColInt.MMD`.
 
+Текущая версия — **0.3.0**. См. [Changelog](CHANGELOG.md); базы предыдущих версий нужно перепечь в формат 7.
+
 ## Установка
 
 Unity 6000.3+ и URP. Этот пакет содержит только `Runtime` и `Editor`; сцены, управление персонажем, анимации и тесты поставляются отдельно в `com.collint.mmd.samples`.
 
-Для установки только ядра в Package Manager выберите **Install package from tarball** и укажите `com.collint.mmd-0.2.0.tgz`. Git LFS для архива не нужен. В проекте разработки архив создаётся командой `python3 Tools/package_release.py --package core`.
+Для установки только ядра в Package Manager выберите **Install package from tarball** и укажите `com.collint.mmd-0.3.0.tgz`. Git LFS для архива не нужен. В проекте разработки архив создаётся командой `python3 Tools/package_release.py --package core`.
 
 После публикации изменений можно установить ядро через **Install package from Git URL**:
 
@@ -16,7 +18,7 @@ https://github.com/sw1f1s/Motion-Matching-for-DOTS.git?path=Assets/Packages/com.
 
 Entities 1.4.3, Entities Graphics 1.4.3, Unity Physics 1.4.3, Collections, Burst, Mathematics, Newtonsoft JSON и URP указаны в `package.json` и разрешаются UPM. Input System, Animation и Terrain Physics объявлены в пакете Samples.
 
-Для примеров сначала установите это ядро, затем `com.collint.mmd.samples-0.2.0.tgz`. Общий ZIP `mmd-with-samples-0.2.0.zip` содержит оба архива. Подробности — в [инструкции Samples](../com.collint.mmd.samples/README.md). Git-установка из общего репозитория может скачивать и содержимое Samples; отдельный архив позволяет скачать только ядро. Старый тег `v0.1.0` содержит прежний объединённый пакет.
+Для примеров сначала установите это ядро, затем `com.collint.mmd.samples-0.3.0.tgz`. Общий ZIP `mmd-with-samples-0.3.0.zip` содержит оба архива. Подробности — в [инструкции Samples](../com.collint.mmd.samples/README.md). Git-установка из общего репозитория может скачивать и содержимое Samples; отдельный архив позволяет скачать только ядро. Старый тег `v0.1.0` содержит прежний объединённый пакет.
 
 Код MMD распространяется под MIT. Сторонние анимации и модели принадлежат пакету Samples и сохраняют исходные условия; см. его [Third Party Notices](../com.collint.mmd.samples/Third%20Party%20Notices.md).
 
@@ -131,7 +133,7 @@ MmdMotionGroups.Set(groups, MmdMotionGroupUsage.Required, run);
 // Для пересечения групп вызовите Add с Required для другого ID.
 ```
 
-Добавьте буфер `MmdMotionGroup` на сущность вместе с компонентами поиска. `Set` меняет только выбранное назначение, сохраняя остальные; `Add` и `Remove` изменяют отдельную группу. Не сохраняйте сгенерированные ID между запеканиями. Формат базы — 6; после обновления пакета свои базы нужно перепечь. `BitMask` — не владеющее памятью представление над `NativeArray<ulong>` для `And`, `Or`, `Xor`, `AndNot`, `Not`, `Intersects` и `ContainsAll`. Операции меняют переданное хранилище без выделений памяти; его размер и освобождение задаёт владелец. Нумерация битов в `BitMask` начинается с 0, ID групп — с 1. Готовую маску можно передать в `MmdMotionGroups.Set(groups, usage, mask)`, `Add(groups, mask, usage)` (OR) и `Remove(groups, mask, usage)` (AND NOT).
+Добавьте буфер `MmdMotionGroup` на сущность вместе с компонентами поиска. `Set` меняет только выбранное назначение, сохраняя остальные; `Add` и `Remove` изменяют отдельную группу. Не сохраняйте сгенерированные ID между запеканиями. Формат базы — 7; после обновления пакета свои базы нужно перепечь. `BitMask` — не владеющее памятью представление над `NativeArray<ulong>` для `And`, `Or`, `Xor`, `AndNot`, `Not`, `Intersects` и `ContainsAll`. Операции меняют переданное хранилище без выделений памяти; его размер и освобождение задаёт владелец. Нумерация битов в `BitMask` начинается с 0, ID групп — с 1. Готовую маску можно передать в `MmdMotionGroups.Set(groups, usage, mask)`, `Add(groups, mask, usage)` (OR) и `Remove(groups, mask, usage)` (AND NOT).
 
 Для немедленного поиска после изменения намерения установите `MmdPlayback.SearchCountdown = 0f`; для прерывания удержания перехода — также `TransitionElapsed = settings.MinimumTransitionTime`.
 

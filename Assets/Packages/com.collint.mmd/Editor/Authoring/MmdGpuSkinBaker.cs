@@ -1,4 +1,3 @@
-using System.Linq;
 using System;
 using ColInt.MMD.Graphics.Authoring;
 using ColInt.MMD.Graphics.Components;
@@ -17,7 +16,11 @@ namespace ColInt.MMD.Editor.Authoring {
 			DependsOn(renderer.sharedMesh);
 			DependsOn(rig.transform);
 			DependsOn(renderer.rootBone);
-			Transform[] bones = GetComponentsInChildren<Transform>(rig).Where(b => b != rig.transform).ToArray();
+			var renderers = GetComponentsInChildren<SkinnedMeshRenderer>(rig);
+			foreach (var skinRenderer in renderers) {
+				DependsOn(skinRenderer);
+			}
+			Transform[] bones = MmdGpuRigBones.Collect(rig.transform, GetComponentsInChildren<Transform>(rig), renderers);
 			Entity skin = GetEntity(TransformUsageFlags.Dynamic);
 			float4x4 renderRoot = math.mul((float4x4)rig.transform.worldToLocalMatrix, (float4x4)renderer.rootBone.localToWorldMatrix);
 			AddComponent(skin, new MmdSkinSource { PoseEntity = GetEntity(rig, TransformUsageFlags.Dynamic), ModelToMesh = math.inverse(renderRoot) });

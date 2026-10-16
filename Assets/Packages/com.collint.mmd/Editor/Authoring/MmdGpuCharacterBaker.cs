@@ -1,4 +1,3 @@
-using System.Linq;
 using System;
 using ColInt.MMD.Database.Data;
 using ColInt.MMD.Database.Helpers;
@@ -12,7 +11,11 @@ namespace ColInt.MMD.Editor.Authoring {
 	public sealed class MmdGpuCharacterBaker : Baker<MmdGpuCharacterAuthoring> {
 		public override void Bake(MmdGpuCharacterAuthoring authoring) {
 			Entity root = GetEntity(TransformUsageFlags.Dynamic);
-			Transform[] bones = GetComponentsInChildren<Transform>().Where(b => b != authoring.transform).ToArray();
+			var renderers = GetComponentsInChildren<SkinnedMeshRenderer>();
+			foreach (var renderer in renderers) {
+				DependsOn(renderer);
+			}
+			Transform[] bones = MmdGpuRigBones.Collect(authoring.transform, GetComponentsInChildren<Transform>(), renderers);
 			var skeleton = AddBuffer<MmdSkeletonBone>(root);
 			var poses = AddBuffer<MmdLocalPose>(root);
 			AddBuffer<MmdModelMatrix>(root);

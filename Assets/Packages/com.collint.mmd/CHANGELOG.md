@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.3.1] - 2026-10-16
+
+### Fixed
+
+- GPU visual binding now maps required bones by path and hierarchy instead of requiring identical Transform arrays. Mesh names, mesh counts, and bone order can differ between compatible models.
+- GPU rig baking includes skin bones and their ancestors rather than unrelated mesh and accessory objects.
+- Skinning indices are remapped per visual instance without modifying the shared prefab or animation database.
+- Invalid skin bindings and incompatible skeletons are rejected before attachment, with failed visual instances cleaned up.
+
+### Samples
+
+- Added regression tests for renamed meshes, additional skinned parts, reordered bones, skinning matrices, and visual cleanup.
+- Updated Samples to depend on MMD 0.3.1.
+
+The database format remains 7. Existing 0.3.0 databases do not need to be re-baked.
+
 ## [0.3.0] - 2026-10-15
 
 ### Added

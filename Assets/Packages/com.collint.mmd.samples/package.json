@@ -1,11 +1,11 @@
 {
   "name": "com.collint.mmd.samples",
   "displayName": "Motion Matching for DOTS \u2014 Samples",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "unity": "6000.3",
   "description": "Optional MMD integration examples, character gameplay, scenes, animation assets, benchmarks and tests.",
   "dependencies": {
-    "com.collint.mmd": "0.3.0",
+    "com.collint.mmd": "0.3.1",
     "com.unity.inputsystem": "1.19.0",
     "com.unity.modules.terrainphysics": "1.0.0",
     "com.unity.modules.animation": "1.0.0"

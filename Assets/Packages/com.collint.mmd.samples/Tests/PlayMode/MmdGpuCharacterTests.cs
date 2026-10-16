@@ -1,5 +1,6 @@
 using ColInt.MMD.Database.Helpers;
 using ColInt.MMD.Graphics.Components;
+using ColInt.MMD.Graphics.Authoring;
 using ColInt.MMD.Graphics.Data;
 using ColInt.MMD.MotionMatching.Components;
 using ColInt.MMD.MotionMatching.Helpers;
@@ -24,7 +25,71 @@ using UnityEngine;
 
 namespace ColInt.MMD.Tests {
 	public class MmdGpuCharacterTests {
+		private const string VariantPath = "Assets/MmdBakeTemporary/TestOutputs/MmdMeshVariant.prefab";
 		private static readonly string PrefabPath = MmdSampleTestAssets.GetPath("Prefabs/SampleCharacter.prefab");
+
+		[Test]
+		public async Task RenamedMeshAndAdditionalSkinnedPartShareTheOriginalDatabase() {
+			var original = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
+			if (!AssetDatabase.IsValidFolder("Assets/MmdBakeTemporary")) {
+				AssetDatabase.CreateFolder("Assets", "MmdBakeTemporary");
+			}
+			if (!AssetDatabase.IsValidFolder("Assets/MmdBakeTemporary/TestOutputs")) {
+				AssetDatabase.CreateFolder("Assets/MmdBakeTemporary", "TestOutputs");
+			}
+			Assert.That(AssetDatabase.LoadAssetAtPath<GameObject>(VariantPath), Is.Null);
+			var contents = PrefabUtility.LoadPrefabContents(PrefabPath);
+			try {
+				var body = contents.GetComponentInChildren<SkinnedMeshRenderer>();
+				body.name = "Renamed Body";
+				body.transform.SetAsFirstSibling();
+				var accessory = new GameObject("Additional Skinned Part").AddComponent<SkinnedMeshRenderer>();
+				accessory.transform.SetParent(contents.transform, false);
+				accessory.sharedMesh = body.sharedMesh;
+				accessory.sharedMaterials = body.sharedMaterials;
+				accessory.bones = body.bones;
+				accessory.rootBone = body.rootBone;
+				accessory.localBounds = body.localBounds;
+				accessory.gameObject.AddComponent<MmdGpuSkinAuthoring>();
+				PrefabUtility.SaveAsPrefabAsset(contents, VariantPath);
+			} finally {
+				PrefabUtility.UnloadPrefabContents(contents);
+			}
+			try {
+				var variant = AssetDatabase.LoadAssetAtPath<GameObject>(VariantPath);
+				using var lifetime = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+				using var simulation = new MmdSampleWorld(0.1f);
+				var manager = simulation.World.EntityManager;
+				Entity character = simulation.Characters.Create(GpuRigDatabaseFixture.Build(original), true, LocalTransform.Identity);
+				int boneCount = manager.GetBuffer<MmdLocalPose>(character).Length;
+				manager.AddComponentData(character, new MmdGpuCharacterRender { Prefab = new EntityPrefabReference(variant) });
+				await WaitForStatus(manager, character, MmdGpuRenderStatus.Ready, lifetime.Token);
+				await WaitForFrames(3, lifetime.Token);
+				using (var query = manager.CreateEntityQuery(typeof(MmdSkinSource), typeof(MmdSkinBinding), typeof(SkinMatrix))) {
+					Assert.That(query.CalculateEntityCount(), Is.EqualTo(2));
+					using var skins = query.ToEntityArray(Unity.Collections.Allocator.Temp);
+					foreach (Entity skin in skins) {
+						Assert.That(manager.GetComponentData<MmdSkinSource>(skin).PoseEntity, Is.EqualTo(character));
+						var bindings = manager.GetBuffer<MmdSkinBinding>(skin);
+						var matrices = manager.GetBuffer<SkinMatrix>(skin);
+						Assert.That(matrices.Length, Is.EqualTo(bindings.Length));
+						foreach (var binding in bindings) {
+							Assert.That(binding.BoneIndex, Is.InRange(0, boneCount - 1));
+						}
+					}
+				}
+				Assert.That(manager.GetBuffer<MmdLocalPose>(character).Length, Is.EqualTo(boneCount));
+				Assert.That(manager.GetComponentData<MmdPlayback>(character).Time, Is.Zero);
+				Entity visual = manager.GetComponentData<MmdGpuCharacterRender>(character).VisualRoot;
+				SetRenderingDisabled(manager, character, true);
+				await WaitForFrames(4, lifetime.Token);
+				Assert.That(manager.Exists(visual), Is.False);
+				SetRenderingDisabled(manager, character, false);
+				await WaitForStatus(manager, character, MmdGpuRenderStatus.Ready, lifetime.Token);
+			} finally {
+				AssetDatabase.DeleteAsset(VariantPath);
+			}
+		}
 
 		[Test]
 		public async Task RenderingWaitsForAnimationDataAndPreservesItOnRelease() {

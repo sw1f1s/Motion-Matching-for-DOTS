@@ -16,6 +16,8 @@ namespace ColInt.MMD.Graphics.Systems {
 		private BufferLookup<MmdLocalPose> _poses;
 		private BufferLookup<MmdModelMatrix> _matrices;
 		private BufferLookup<LinkedEntityGroup> _linked;
+		private ComponentLookup<MmdSkinSource> _sources;
+		private BufferLookup<MmdSkinBinding> _bindings;
 
 		public void OnCreate(ref SystemState state) {
 			_loading = new EntityQueryBuilder(Allocator.Temp).WithAll<MmdGpuCharacterRender, PrefabLoadResult, MmdGpuCharacterRenderInitialized>().WithNone<MmdGpuCharacterRenderDisabled>().Build(ref state);
@@ -24,6 +26,8 @@ namespace ColInt.MMD.Graphics.Systems {
 			_poses = state.GetBufferLookup<MmdLocalPose>(true);
 			_matrices = state.GetBufferLookup<MmdModelMatrix>(true);
 			_linked = state.GetBufferLookup<LinkedEntityGroup>(true);
+			_sources = state.GetComponentLookup<MmdSkinSource>(true);
+			_bindings = state.GetBufferLookup<MmdSkinBinding>(true);
 		}
 
 		public void OnUpdate(ref SystemState state) {
@@ -31,6 +35,8 @@ namespace ColInt.MMD.Graphics.Systems {
 			_poses.Update(ref state);
 			_matrices.Update(ref state);
 			_linked.Update(ref state);
+			_sources.Update(ref state);
+			_bindings.Update(ref state);
 			state.Dependency.Complete();
 			using (var commands = new EntityCommandBuffer(Allocator.Temp)) {
 				foreach (var (render, result, entity) in SystemAPI.Query<RefRW<MmdGpuCharacterRender>, RefRO<PrefabLoadResult>>().WithAll<MmdGpuCharacterRenderInitialized>().WithNone<MmdGpuCharacterRenderDisabled>().WithEntityAccess()) {
@@ -42,7 +48,7 @@ namespace ColInt.MMD.Graphics.Systems {
 					if (resources.VisualRoot != Entity.Null) {
 						continue;
 					}
-					status = MmdGpuVisualBinding.Validate(entity, result.ValueRO.PrefabRoot, _skeletons, _poses, _matrices, _linked);
+					status = MmdGpuVisualBinding.Validate(entity, result.ValueRO.PrefabRoot, _skeletons, _poses, _matrices, _linked, _sources, _bindings);
 					if (status == MmdGpuRenderStatus.Ready) {
 						resources.VisualRoot = commands.Instantiate(result.ValueRO.PrefabRoot);
 						// The owner retains the asset; the visual instance needs no second request.

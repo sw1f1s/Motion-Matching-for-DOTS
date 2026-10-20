@@ -83,7 +83,7 @@ namespace ColInt.MMD.Database.Helpers {
 					if (frame.ClipIndex != clipIndex || !math.isfinite(frame.Time) || math.abs(frame.Time - expected) > 0.0001f ||
 						(i > 0 && frame.Time <= source.Frames[first + i - 1].Time) ||
 						!math.all(math.isfinite(frame.Root.pos)) || !UnitQuaternion(frame.Root.rot)) {
-						throw new ArgumentException("Invalid root samples or clip frame timing.");
+						throw new ArgumentException($"Invalid root sample at clip {clipIndex}, sample {i}: time {frame.Time:R}, expected {expected:R}, previous {(i > 0 ? source.Frames[first + i - 1].Time : -1f):R}, duration {clip.Duration:R}, root {frame.Root.pos}, rotation {frame.Root.rot.value}.");
 					}
 				}
 				if (math.abs(source.Frames[first + clip.FrameCount - 1].Time - clip.Duration) > 0.0001f) {

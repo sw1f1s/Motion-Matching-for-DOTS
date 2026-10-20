@@ -85,6 +85,13 @@ namespace ColInt.MMD.Editor.Baking {
 					instance.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
 					instance.transform.localScale = Vector3.one;
 					int samples = (int)math.ceil(source.Clip.length * configuration.SampleRate) + 1;
+					// Compare stored float32 times; the JIT may keep division intermediates at higher precision.
+					while (samples > 2 && math.asint((samples - 2) / configuration.SampleRate) >= math.asint(source.Clip.length)) {
+						samples--;
+					}
+					while (math.asint((samples - 1) / configuration.SampleRate) < math.asint(source.Clip.length)) {
+						samples++;
+					}
 					int first = frames.Count;
 					PlayableGraph graph = default;
 					AnimationClipPlayable playable = default;
@@ -122,7 +129,7 @@ namespace ColInt.MMD.Editor.Baking {
 								await Task.Yield();
 						cancellation.ThrowIfCancellationRequested();
 							}
-							float time = math.min(sample / configuration.SampleRate, source.Clip.length);
+							float time = sample == samples - 1 ? source.Clip.length : sample / configuration.SampleRate;
 							if (graph.IsValid()) {
 								playable.SetTime(time);
 								graph.Evaluate(time - previous);

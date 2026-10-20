@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.3.2] - 2026-10-20
+
+### Fixed
+
+- Corrected animation bake sample counts when floating-point rounding places a clip duration just above or below the sampling grid.
+- Bake frame times now increase strictly and include the exact clip endpoint once, while preserving strict database validation.
+- Added clip and sample details to invalid root sample diagnostics.
+
+### Samples
+
+- Added regression tests for grid-aligned durations, adjacent float values, partial intervals, and duplicate endpoint rejection.
+- Updated Samples to depend on MMD 0.3.2.
+
+The database format remains 7. Existing valid databases do not need to be re-baked.
+
 ## [0.3.1] - 2026-10-16
 
 ### Fixed

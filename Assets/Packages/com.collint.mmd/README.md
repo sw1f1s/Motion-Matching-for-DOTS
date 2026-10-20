@@ -2,13 +2,13 @@
 
 MMD — плагин анимации для Unity Entities: Motion Matching, воспроизведение скелетной анимации, root motion и GPU-деформация через Entities Graphics. Идентификатор: `com.collint.mmd`, namespace: `ColInt.MMD`.
 
-Текущая версия — **0.3.1**. См. [Changelog](CHANGELOG.md); базы форматов ниже 7 нужно перепечь. Обновление с 0.3.0 не требует повторного запекания базы.
+Текущая версия — **0.3.2**. См. [Changelog](CHANGELOG.md); базы форматов ниже 7 нужно перепечь. Обновление с 0.3.0 не требует повторного запекания базы.
 
 ## Установка
 
 Unity 6000.3+ и URP. Этот пакет содержит только `Runtime` и `Editor`; сцены, управление персонажем, анимации и тесты поставляются отдельно в `com.collint.mmd.samples`.
 
-Для установки только ядра в Package Manager выберите **Install package from tarball** и укажите `com.collint.mmd-0.3.1.tgz`. Git LFS для архива не нужен. В проекте разработки архив создаётся командой `python3 Tools/package_release.py --package core`.
+Для установки только ядра в Package Manager выберите **Install package from tarball** и укажите `com.collint.mmd-0.3.2.tgz`. Git LFS для архива не нужен. В проекте разработки архив создаётся командой `python3 Tools/package_release.py --package core`.
 
 После публикации изменений можно установить ядро через **Install package from Git URL**:
 
@@ -18,7 +18,7 @@ https://github.com/sw1f1s/Motion-Matching-for-DOTS.git?path=Assets/Packages/com.
 
 Entities 1.4.3, Entities Graphics 1.4.3, Unity Physics 1.4.3, Collections, Burst, Mathematics, Newtonsoft JSON и URP указаны в `package.json` и разрешаются UPM. Input System, Animation и Terrain Physics объявлены в пакете Samples.
 
-Для примеров сначала установите это ядро, затем `com.collint.mmd.samples-0.3.1.tgz`. Общий ZIP `mmd-with-samples-0.3.1.zip` содержит оба архива. Подробности — в [инструкции Samples](../com.collint.mmd.samples/README.md). Git-установка из общего репозитория может скачивать и содержимое Samples; отдельный архив позволяет скачать только ядро. Старый тег `v0.1.0` содержит прежний объединённый пакет.
+Для примеров сначала установите это ядро, затем `com.collint.mmd.samples-0.3.2.tgz`. Общий ZIP `mmd-with-samples-0.3.2.zip` содержит оба архива. Подробности — в [инструкции Samples](../com.collint.mmd.samples/README.md). Git-установка из общего репозитория может скачивать и содержимое Samples; отдельный архив позволяет скачать только ядро. Старый тег `v0.1.0` содержит прежний объединённый пакет.
 
 Код MMD распространяется под MIT. Сторонние анимации и модели принадлежат пакету Samples и сохраняют исходные условия; см. его [Third Party Notices](../com.collint.mmd.samples/Third%20Party%20Notices.md).
 
